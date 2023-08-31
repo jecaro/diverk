@@ -1,7 +1,7 @@
 {
   "name": "styles",
   "version": "0.0.0",
-  "author": "Obsidian Systems, LLC",
+  "author": "Jean-Charles Quillet",
   "dependencies": {
     "@tailwindcss/ui": "^0.7.2",
     "autoprefixer": "^10.1.0",

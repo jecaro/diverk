@@ -21,8 +21,8 @@ project ./. ({ pkgs, ... }: {
     implicit-hie = pkgs.haskell.packages.ghc865.implicit-hie;
   };
   staticFiles = import ./static { inherit pkgs; };
-  android.applicationId = "systems.obsidian.obelisk.examples.minimal";
-  android.displayName = "Obelisk Minimal Example";
-  ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
-  ios.bundleName = "Obelisk Minimal Example";
+  android.applicationId = "org.jecaro.diverk";
+  android.displayName = "Diverk";
+  ios.bundleIdentifier = "org.jecaro.diverk";
+  ios.bundleName = "Diverk";
 })
