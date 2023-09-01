@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 {- HLINT ignore "Use camelCase" -}
-module Common.Route (BackendRoute, FrontendRoute, fullRouteEncoder) where
+module Common.Route (BackendRoute, FrontendRoute (..), fullRouteEncoder) where
 
 {- -- You will probably want these imports for composing Encoders.
 import Prelude hiding (id, (.))
