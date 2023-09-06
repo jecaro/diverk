@@ -6,50 +6,88 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
-{- HLINT ignore "Use camelCase" -}
-module Common.Route (BackendRoute, FrontendRoute (..), fullRouteEncoder) where
+module Common.Route
+  ( BackendRoute,
+    FrontendRoute (..),
+    FinalRoute (..),
+    fullRouteEncoder,
+  )
+where
 
-{- -- You will probably want these imports for composing Encoders.
-import Prelude hiding (id, (.))
-import Control.Category
--}
-
-import Data.Functor.Identity
+import Common.Model (Branch (..), Hash (..), Owner (..), Repo (..))
+import Control.Category ((.))
+import Control.Monad.Except (MonadError)
+import Data.Functor.Identity (Identity)
 import Data.Text (Text)
 import Obelisk.Route
-import Obelisk.Route.TH
+  ( Encoder,
+    FullRoute (..),
+    PageName,
+    R,
+    SegmentResult (..),
+    mkFullRouteEncoder,
+    pathComponentEncoder,
+    pathParamEncoder,
+    singlePathSegmentEncoder,
+    unitEncoder,
+    unwrappedEncoder,
+    pattern (:/),
+  )
+import Obelisk.Route.TH (deriveRouteComponent)
+import Prelude hiding (id, (.))
 
 data BackendRoute :: * -> * where
   -- | Used to handle unparseable routes.
-  BackendRoute_Missing :: BackendRoute ()
+  MkMissing :: BackendRoute ()
 
--- You can define any routes that will be handled specially by the backend here.
--- i.e. These do not serve the frontend, but do something different, such as serving static files.
+-- Frontend routes
+
+data FinalRoute :: * -> * where
+  MkTree :: FinalRoute Hash
 
 data FrontendRoute :: * -> * where
-  FrontendRoute_Main :: FrontendRoute ()
-
--- This type is used to define frontend routes, i.e. ones for which the backend will serve the frontend.
+  MkHome :: FrontendRoute ()
+  MkRepo :: FrontendRoute (Owner, (Repo, (Branch, R FinalRoute)))
 
 fullRouteEncoder ::
-  Encoder (Either Text) Identity (R (FullRoute BackendRoute FrontendRoute)) PageName
+  Encoder
+    (Either Text)
+    Identity
+    (R (FullRoute BackendRoute FrontendRoute))
+    PageName
 fullRouteEncoder =
   mkFullRouteEncoder
-    (FullRoute_Backend BackendRoute_Missing :/ ())
+    (FullRoute_Backend MkMissing :/ ())
     ( \case
-        BackendRoute_Missing -> PathSegment "missing" $ unitEncoder mempty
+        MkMissing -> PathSegment "missing" $ unitEncoder mempty
     )
     ( \case
-        FrontendRoute_Main -> PathEnd $ unitEncoder mempty
+        MkHome -> PathEnd $ unitEncoder mempty
+        Common.Route.MkRepo ->
+          PathSegment "repo"
+            . pathParamEncoder unwrappedEncoder
+            . pathParamEncoder unwrappedEncoder
+            . pathParamEncoder unwrappedEncoder
+            $ finalRouteEncoder
     )
 
+finalRouteEncoder ::
+  (MonadError Text check, MonadError Text parse) =>
+  Encoder check parse (R FinalRoute) PageName
+finalRouteEncoder = pathComponentEncoder $ \case
+  MkTree -> PathSegment "tree" $ singlePathSegmentEncoder . unwrappedEncoder
+
+-- | This is the function that will be used to generate links to frontend routes.
 concat
   <$> mapM
     deriveRouteComponent
     [ ''BackendRoute,
-      ''FrontendRoute
+      ''FrontendRoute,
+      ''FinalRoute
     ]

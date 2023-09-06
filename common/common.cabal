@@ -6,11 +6,13 @@ build-type: Simple
 library
   hs-source-dirs: src
   build-depends: base
-               , obelisk-route
+               , lens
                , mtl
+               , obelisk-route
                , text
   exposed-modules:
     Common.Api
+    Common.Model
     Common.Route
   ghc-options: -Wall -O -fno-show-valid-hole-fits
                -- unsafe code
