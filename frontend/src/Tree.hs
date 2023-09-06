@@ -36,7 +36,7 @@ data Object = MkObject
 
 makeLensesWith abbreviatedFields ''Object
 
-data Error = ErWrongStatus Word | ErWrongJSON | ErOtherError Text | ErInvalid
+data Error = ErStatus Word | ErJSON | ErRequest | ErInvalid
   deriving (Eq, Show)
 
 data State = StInitial | StFetching | StOk [Object] | StError Error
@@ -48,16 +48,15 @@ data LocalEvent
 
 updateState :: LocalEvent -> State -> State
 updateState LoStartRequest StInitial = StFetching
-updateState (LoEndRequest (Left _)) StFetching =
-  StError (ErOtherError "Request error")
+updateState (LoEndRequest (Left _)) StFetching = StError ErRequest
 updateState (LoEndRequest (Right response)) StFetching = responseToState response
 updateState _ _ = StError ErInvalid
 
 responseToState :: XhrResponse -> State
 responseToState response =
   case response ^. xhrResponse_status of
-    200 -> maybe (StError ErWrongJSON) StOk mbObjects
-    code -> StError $ ErWrongStatus code
+    200 -> maybe (StError ErJSON) StOk mbObjects
+    code -> StError $ ErStatus code
   where
     mbObjects = do
       json :: JSON.Value <- decodeXhrResponse response
