@@ -9,7 +9,7 @@
 
 module Tree (tree) where
 
-import Common.Model (GitTree (..), Hash (..), treeUrl)
+import Common.Model (Hash (..), Owner, Repo, treeUrl)
 import Common.Route (FrontendRoute)
 import qualified Common.Route as Route
 import Control.Lens
@@ -90,11 +90,12 @@ tree ::
     SetRoute t (R FrontendRoute) m,
     RouteToUrl (R FrontendRoute) m
   ) =>
-  GitTree ->
+  Owner ->
+  Repo ->
   Hash ->
   m ()
-tree gitTree@MkGitTree {..} hash' = do
-  evRequest <- (xhrRequest "GET" (treeUrl gitTree hash') def <$) <$> getPostBuild
+tree owner repo hash' = do
+  evRequest <- (xhrRequest "GET" (treeUrl owner repo hash') def <$) <$> getPostBuild
   evResponse <-
     switchDyn
       <$> prerender
@@ -114,15 +115,7 @@ tree gitTree@MkGitTree {..} hash' = do
           Blob -> text $ object ^. path
           Tree ->
             routeLink
-              ( Route.MkRepo
-                  :/ ( reOwner,
-                       ( reRepo,
-                         ( reBranch,
-                           Route.MkTree
-                             :/ (object ^. hash)
-                         )
-                       )
-                     )
+              ( Route.MkRepo :/ (owner, (repo, Route.MkTree :/ (object ^. hash)))
               )
               . text
               $ object ^. path

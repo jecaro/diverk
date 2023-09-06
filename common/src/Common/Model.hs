@@ -8,23 +8,13 @@ module Common.Model
   ( Owner (..),
     Branch (..),
     Repo (..),
-    GitTree (..),
     Hash (..),
-    owner,
-    repo,
-    branch,
     repoUrl,
     treeUrl,
   )
 where
 
-import Control.Lens
-  ( abbreviatedFields,
-    makeLensesWith,
-    makeWrapped,
-    (^.),
-    _Wrapped,
-  )
+import Control.Lens (makeWrapped, (^.), _Wrapped)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -40,31 +30,22 @@ newtype Branch = MkBranch {unBranch :: Text}
 newtype Hash = MkHash {unHash :: Text}
   deriving (Eq, Show, Read)
 
-data GitTree = MkGitTree
-  { reOwner :: !Owner,
-    reRepo :: !Repo,
-    reBranch :: !Branch
-  }
-  deriving (Eq, Show)
-
-makeLensesWith abbreviatedFields ''GitTree
-
 makeWrapped ''Branch
 makeWrapped ''Hash
 makeWrapped ''Owner
 makeWrapped ''Repo
 
-githubUrl :: GitTree -> [Text] -> Text
-githubUrl tree path =
+githubUrl :: Owner -> Repo -> [Text] -> Text
+githubUrl owner repo path =
   T.intercalate "/" $
     [ "https://api.github.com/repos",
-      tree ^. owner . _Wrapped,
-      tree ^. repo . _Wrapped
+      owner ^. _Wrapped,
+      repo ^. _Wrapped
     ]
       <> path
 
-repoUrl :: GitTree -> Text
-repoUrl tree = githubUrl tree ["branches", tree ^. branch . _Wrapped]
+repoUrl :: Owner -> Repo -> Branch -> Text
+repoUrl owner repo branch = githubUrl owner repo ["branches", branch ^. _Wrapped]
 
-treeUrl :: GitTree -> Hash -> Text
-treeUrl tree hash = githubUrl tree ["git", "trees", hash ^. _Wrapped]
+treeUrl :: Owner -> Repo -> Hash -> Text
+treeUrl owner repo hash = githubUrl owner repo ["git", "trees", hash ^. _Wrapped]

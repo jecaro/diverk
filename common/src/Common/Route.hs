@@ -20,7 +20,7 @@ module Common.Route
   )
 where
 
-import Common.Model (Branch (..), Hash (..), Owner (..), Repo (..))
+import Common.Model (Hash (..), Owner (..), Repo (..))
 import Control.Category ((.))
 import Control.Monad.Except (MonadError)
 import Data.Functor.Identity (Identity)
@@ -53,7 +53,7 @@ data FinalRoute :: * -> * where
 
 data FrontendRoute :: * -> * where
   MkHome :: FrontendRoute ()
-  MkRepo :: FrontendRoute (Owner, (Repo, (Branch, R FinalRoute)))
+  MkRepo :: FrontendRoute (Owner, (Repo, R FinalRoute))
 
 fullRouteEncoder ::
   Encoder
@@ -71,7 +71,6 @@ fullRouteEncoder =
         MkHome -> PathEnd $ unitEncoder mempty
         Common.Route.MkRepo ->
           PathSegment "repo"
-            . pathParamEncoder unwrappedEncoder
             . pathParamEncoder unwrappedEncoder
             . pathParamEncoder unwrappedEncoder
             $ finalRouteEncoder

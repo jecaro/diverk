@@ -11,13 +11,12 @@
 
 module Frontend (frontend) where
 
-import Common.Model (GitTree (..))
 import Common.Route (FinalRoute (..), FrontendRoute (..))
 import Home (home)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R)
-import Obelisk.Route.Frontend (askRoute, subPairRoute_, subRoute_, withRoutedT)
+import Obelisk.Route.Frontend (askRoute, subPairRoute_, subRoute_)
 import Reflex.Dom.Core
 import Tree (tree)
 
@@ -40,10 +39,9 @@ frontend =
         elAttr "div" ("class" =: "mt-4 mb-4 mr-4 ml-4 space-y-4") $ do
           subRoute_ $ \case
             MkHome -> home
-            MkRepo -> withRoutedT (fmap toGitTree) $
-              subPairRoute_ $ \gitTree ->
-                subRoute_ $ \case
-                  MkTree -> dyn_ . fmap (tree gitTree) =<< askRoute
+            MkRepo ->
+              subPairRoute_ $ \owner ->
+                subPairRoute_ $ \repo ->
+                  subRoute_ $ \case
+                    MkTree -> dyn_ . fmap (tree owner repo) =<< askRoute
     }
-  where
-    toGitTree (reOwner, (reRepo, (reBranch, route))) = (MkGitTree {..}, route)

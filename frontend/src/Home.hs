@@ -4,7 +4,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -12,7 +11,6 @@ module Home (home) where
 
 import Common.Model
   ( Branch (..),
-    GitTree (..),
     Hash (..),
     Owner (..),
     Repo (..),
@@ -55,9 +53,10 @@ home ::
   ) =>
   m ()
 home = do
-  rec dynGitTree <- repoInput
-      evButtonClick <- buttonThenLink $ zipDyn dynState dynGitTree
-      evRequestPerformed <- requestPerformed (repoUrl <$> dynGitTree) evButtonClick
+  rec (dynOwner, dynRepo, dynBranch) <- repoInput
+      evButtonClick <- buttonThenLink ((,,) <$> dynState <*> dynOwner <*> dynRepo)
+      let dynUrl = repoUrl <$> dynOwner <*> dynRepo <*> dynBranch
+      evRequestPerformed <- requestPerformed dynUrl evButtonClick
 
       -- We merge all the events in the page
       let events =
@@ -111,12 +110,12 @@ requestPerformed dynUrl event = do
       (pure never)
       (performRequestAsyncWithError evStartRequest)
 
-repoInput :: (DomBuilder t m) => m (Dynamic t GitTree)
+repoInput :: (DomBuilder t m) => m (Dynamic t Owner, Dynamic t Repo, Dynamic t Branch)
 repoInput = do
   dynOwner <- fmap MkOwner <$> inputWidget "Owner" "jecaro"
   dynRepo <- fmap MkRepo <$> inputWidget "Repo" "mprisqueeze"
   dynBranch <- fmap MkBranch <$> inputWidget "Branch" "main"
-  pure $ MkGitTree <$> dynOwner <*> dynRepo <*> dynBranch
+  pure (dynOwner, dynRepo, dynBranch)
 
 buttonThenLink ::
   ( RouteToUrl (R FrontendRoute) m,
@@ -126,19 +125,19 @@ buttonThenLink ::
     MonadHold t m,
     Prerender t m
   ) =>
-  Dynamic t (State, GitTree) ->
+  Dynamic t (State, Owner, Repo) ->
   m (Event t ())
 buttonThenLink dynState = do
   evEvent <-
     dyn . ffor dynState $ \case
-      (StOk hash, MkGitTree {..}) -> do
+      (StOk hash, owner, repo) -> do
         routeLinkAttr
           ("class" =: "block")
-          (Route.MkRepo :/ (reOwner, (reRepo, (reBranch, Route.MkTree :/ hash))))
+          (Route.MkRepo :/ (owner, (repo, Route.MkTree :/ hash)))
           . elAttr "button" ("class" =: buttonClasses)
           $ text "Go"
         pure never
-      (state, _) -> button' . text $ toText state
+      (state, _, _) -> button' . text $ toText state
   switchHold never evEvent
   where
     toText StTrying = "Checking..."
