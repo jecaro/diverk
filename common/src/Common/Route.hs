@@ -9,7 +9,7 @@ module Common.Route
   )
 where
 
-import Common.Model (Hash (..), Owner (..), Repo (..))
+import Common.Model (Hash (..), Owner (..), Repo)
 import Control.Category ((.))
 import Control.Monad.Except (MonadError)
 import Data.Functor.Identity (Identity)
@@ -39,10 +39,11 @@ data BackendRoute :: * -> * where
 
 data FinalRoute :: * -> * where
   MkTree :: FinalRoute Hash
+  MkBlob :: FinalRoute Hash
 
 data FrontendRoute :: * -> * where
   MkHome :: FrontendRoute ()
-  MkRepo :: FrontendRoute (Owner, (Repo, R FinalRoute))
+  MkOwnerAndRepo :: FrontendRoute (Owner, (Repo, R FinalRoute))
 
 fullRouteEncoder ::
   Encoder
@@ -58,7 +59,7 @@ fullRouteEncoder =
     )
     ( \case
         MkHome -> PathEnd $ unitEncoder mempty
-        Common.Route.MkRepo ->
+        MkOwnerAndRepo ->
           PathSegment "repo"
             . pathParamEncoder unwrappedEncoder
             . pathParamEncoder unwrappedEncoder
@@ -70,6 +71,7 @@ finalRouteEncoder ::
   Encoder check parse (R FinalRoute) PageName
 finalRouteEncoder = pathComponentEncoder $ \case
   MkTree -> PathSegment "tree" $ singlePathSegmentEncoder . unwrappedEncoder
+  MkBlob -> PathSegment "blob" $ singlePathSegmentEncoder . unwrappedEncoder
 
 -- | This is the function that will be used to generate links to frontend routes.
 concat

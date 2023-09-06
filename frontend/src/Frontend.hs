@@ -2,6 +2,7 @@
 
 module Frontend (frontend) where
 
+import Blob (blob)
 import Common.Route (FinalRoute (..), FrontendRoute (..))
 import Home (home)
 import Obelisk.Frontend (Frontend (..))
@@ -30,9 +31,10 @@ frontend =
         elAttr "div" ("class" =: "mt-4 mb-4 mr-4 ml-4 space-y-4") $ do
           subRoute_ $ \case
             MkHome -> home
-            MkRepo ->
+            MkOwnerAndRepo ->
               subPairRoute_ $ \owner ->
                 subPairRoute_ $ \repo ->
                   subRoute_ $ \case
                     MkTree -> dyn_ . fmap (tree owner repo) =<< askRoute
+                    MkBlob -> dyn_ . fmap (blob owner repo) =<< askRoute
     }

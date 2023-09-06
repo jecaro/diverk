@@ -10,8 +10,7 @@ import Common.Model
     Repo (..),
     repoUrl,
   )
-import Common.Route as Route (FrontendRoute)
-import qualified Common.Route as Route
+import Common.Route (FinalRoute (..), FrontendRoute (..))
 import Control.Lens (preview, (^.), _Unwrapped)
 import Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as JSON
@@ -127,7 +126,7 @@ buttonThenLink dynState = do
       (StOk hash, owner, repo) -> do
         routeLinkAttr
           ("class" =: "block")
-          (Route.MkRepo :/ (owner, (repo, Route.MkTree :/ hash)))
+          (MkOwnerAndRepo :/ (owner, (repo, MkTree :/ hash)))
           . elAttr "button" ("class" =: buttonClasses)
           $ text "Go"
         pure never

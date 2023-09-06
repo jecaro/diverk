@@ -4,8 +4,7 @@
 module Tree (tree) where
 
 import Common.Model (Hash (..), Owner, Repo, treeUrl)
-import Common.Route (FrontendRoute)
-import qualified Common.Route as Route
+import Common.Route (FinalRoute (..), FrontendRoute (..))
 import Control.Lens
   ( abbreviatedFields,
     makeLensesWith,
@@ -104,12 +103,18 @@ tree owner repo hash' = do
     StError err -> el "div" . text . T.pack $ show err
     StOk objects ->
       forM_ objects $ \object -> do
-        el "div" $ case object ^. kind of
-          Blob -> text $ object ^. path
-          Tree ->
-            routeLink
-              ( Route.MkRepo :/ (owner, (repo, Route.MkTree :/ (object ^. hash)))
-              )
-              . text
-              $ object ^. path
+        el "div" $ do
+          routeLink
+            ( MkOwnerAndRepo
+                :/ ( owner,
+                     ( repo,
+                       kindToFinalRoute (object ^. kind) :/ object ^. hash
+                     )
+                   )
+            )
+            . text
+            $ object ^. path
     _ -> blank
+  where
+    kindToFinalRoute Tree = MkTree
+    kindToFinalRoute Blob = MkBlob

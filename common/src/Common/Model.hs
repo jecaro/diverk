@@ -5,6 +5,7 @@ module Common.Model
     Branch (..),
     Repo (..),
     Hash (..),
+    blobUrl,
     repoUrl,
     treeUrl,
   )
@@ -45,3 +46,6 @@ repoUrl owner repo branch = githubUrl owner repo ["branches", branch ^. _Wrapped
 
 treeUrl :: Owner -> Repo -> Hash -> Text
 treeUrl owner repo hash = githubUrl owner repo ["git", "trees", hash ^. _Wrapped]
+
+blobUrl :: Owner -> Repo -> Hash -> Text
+blobUrl owner repo hash = githubUrl owner repo ["git", "blobs", hash ^. _Wrapped]

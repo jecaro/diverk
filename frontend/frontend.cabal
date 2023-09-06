@@ -64,7 +64,9 @@ library
   build-depends:
     aeson,
     base,
+    base64,
     common,
+    extra,
     jsaddle,
     lens,
     lens-aeson,
@@ -75,6 +77,7 @@ library
     reflex-dom-core,
     text,
   exposed-modules:
+    Blob
     Frontend
     Home
     Tree
