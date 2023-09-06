@@ -68,6 +68,5 @@ library
     obelisk-route,
     text,
   exposed-modules:
-    Common.Api
     Common.Model
     Common.Route
