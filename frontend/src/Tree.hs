@@ -3,42 +3,52 @@
 
 module Tree (tree) where
 
-import Common.Model (Hash (..), Owner, Repo, treeUrl)
-import Common.Route (FinalRoute (..), FrontendRoute (..))
+import Common.Model (Owner, Repo, githubURL)
+import Common.Route (FrontendRoute (..))
 import Control.Lens
   ( abbreviatedFields,
     makeLensesWith,
+    preview,
+    to,
+    toListOf,
     (^.),
-    (^..),
-    (^?),
-    _Unwrapped,
   )
 import Control.Monad (forM_)
 import Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
+import Data.Bifunctor (Bifunctor (first))
+import Data.Either.Extra (maybeToEither)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Text.Encoding.Base64 (decodeBase64)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink)
 import Reflex.Dom.Core
 
-data ObjectKind = Blob | Tree
-  deriving (Eq, Show)
-
-data Object = MkObject
-  { obPath :: Text,
-    obHash :: Hash,
-    obKind :: ObjectKind
+newtype TreeElt = MkTreeElt
+  { trPath :: [Text]
   }
   deriving (Eq, Show)
 
-makeLensesWith abbreviatedFields ''Object
-
-data Error = ErStatus Word | ErJSON | ErRequest | ErInvalid
+data Blob = MkBlob
+  { blPath :: [Text],
+    blContent :: Text
+  }
   deriving (Eq, Show)
 
-data State = StInitial | StFetching | StOk [Object] | StError Error
+makeLensesWith abbreviatedFields ''Blob
+makeLensesWith abbreviatedFields ''TreeElt
+
+data Error = ErStatus Word | ErJSON | ErBase64 Text | ErRequest | ErInvalid
+  deriving (Eq, Show)
+
+data State
+  = StInitial
+  | StFetching
+  | StTree [TreeElt]
+  | StBlob Blob
+  | StError Error
   deriving (Eq, Show)
 
 data LocalEvent
@@ -54,24 +64,35 @@ updateState _ _ = StError ErInvalid
 responseToState :: XhrResponse -> State
 responseToState response =
   case response ^. xhrResponse_status of
-    200 -> maybe (StError ErJSON) StOk mbObjects
+    200 -> either StError (either StTree StBlob) eiObjects
     code -> StError $ ErStatus code
   where
-    mbObjects = do
-      json :: JSON.Value <- decodeXhrResponse response
-      let objects = json ^.. key "tree" . values
-      traverse toObject objects
+    eiObjects :: Either Error (Either [TreeElt] Blob)
+    eiObjects = do
+      v <- maybeToEither ErJSON $ decodeXhrResponse response
+      case v of
+        JSON.Object _ -> Right <$> toBlob v
+        JSON.Array _ -> Left <$> toTreeElts v
+        _ -> Left ErJSON
 
-    toObject :: JSON.Value -> Maybe Object
-    toObject v = do
-      obPath <- v ^? key "path" . _String
-      obHash <- v ^? key "sha" . _String . _Unwrapped
-      obKind <-
-        v ^? key "type" . _String >>= \case
-          "blob" -> Just Blob
-          "tree" -> Just Tree
-          _ -> Nothing
-      pure $ MkObject {..}
+    toBlob :: JSON.Value -> Either Error Blob
+    toBlob v = do
+      blPath <- maybeToEither ErJSON $ parsePath v
+      rawContent <- maybeToEither ErJSON $ parseContent v
+      blContent <- first ErBase64 $ decodeBase64 rawContent
+      pure $ MkBlob {..}
+
+    toTreeElt :: JSON.Value -> Maybe TreeElt
+    toTreeElt = fmap MkTreeElt . parsePath
+
+    toTreeElts :: JSON.Value -> Either Error [TreeElt]
+    toTreeElts = maybeToEither ErJSON . traverse toTreeElt . toListOf values
+
+    parseContent = preview $ key "content" . _String . to withoutEOL
+    -- The GitHub API pads the text with newlines every 60 characters
+    withoutEOL = T.filter (/= '\n')
+    parsePath = preview $ key "path" . _String . to splitPath
+    splitPath = T.split (== '/')
 
 tree ::
   ( DomBuilder t m,
@@ -84,10 +105,11 @@ tree ::
   ) =>
   Owner ->
   Repo ->
-  Hash ->
+  [Text] ->
   m ()
-tree owner repo hash' = do
-  evRequest <- (xhrRequest "GET" (treeUrl owner repo hash') def <$) <$> getPostBuild
+tree owner repo path' = do
+  evRequest <-
+    (xhrRequest "GET" (githubURL owner repo path') def <$) <$> getPostBuild
   evResponse <-
     switchDyn
       <$> prerender
@@ -101,20 +123,20 @@ tree owner repo hash' = do
 
   dyn_ . ffor dynState $ \case
     StError err -> el "div" . text . T.pack $ show err
-    StOk objects ->
-      forM_ objects $ \object -> do
-        el "div" $ do
+    StTree objects ->
+      forM_ objects $ \object ->
+        el "div" $
           routeLink
             ( MkOwnerAndRepo
                 :/ ( owner,
                      ( repo,
-                       kindToFinalRoute (object ^. kind) :/ object ^. hash
+                       object ^. path
                      )
                    )
             )
             . text
-            $ object ^. path
+            $ T.intercalate "/" $ object ^. path
+    StBlob object ->
+      elAttr "div" ("class" =: "whitespace-pre") $
+        text $ object ^. content
     _ -> blank
-  where
-    kindToFinalRoute Tree = MkTree
-    kindToFinalRoute Blob = MkBlob

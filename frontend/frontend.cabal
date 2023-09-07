@@ -77,7 +77,6 @@ library
     reflex-dom-core,
     text,
   exposed-modules:
-    Blob
     Frontend
     Home
     Tree

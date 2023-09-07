@@ -1,15 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Common.Model
-  ( Owner (..),
-    Branch (..),
-    Repo (..),
-    Hash (..),
-    blobUrl,
-    repoUrl,
-    treeUrl,
-  )
-where
+module Common.Model (Owner (..), Repo (..), githubURL) where
 
 import Control.Lens (makeWrapped, (^.), _Wrapped)
 import Data.Text (Text)
@@ -21,31 +12,19 @@ newtype Owner = MkOwner {unOwner :: Text}
 newtype Repo = MkRepo {unRepo :: Text}
   deriving (Eq, Show, Read)
 
-newtype Branch = MkBranch {unBranch :: Text}
-  deriving (Eq, Show, Read)
+concat
+  <$> mapM
+    makeWrapped
+    [ ''Owner,
+      ''Repo
+    ]
 
-newtype Hash = MkHash {unHash :: Text}
-  deriving (Eq, Show, Read)
-
-makeWrapped ''Branch
-makeWrapped ''Hash
-makeWrapped ''Owner
-makeWrapped ''Repo
-
-githubUrl :: Owner -> Repo -> [Text] -> Text
-githubUrl owner repo path =
+githubURL :: Owner -> Repo -> [Text] -> Text
+githubURL owner repo path =
   T.intercalate "/" $
     [ "https://api.github.com/repos",
       owner ^. _Wrapped,
-      repo ^. _Wrapped
+      repo ^. _Wrapped,
+      "contents"
     ]
       <> path
-
-repoUrl :: Owner -> Repo -> Branch -> Text
-repoUrl owner repo branch = githubUrl owner repo ["branches", branch ^. _Wrapped]
-
-treeUrl :: Owner -> Repo -> Hash -> Text
-treeUrl owner repo hash = githubUrl owner repo ["git", "trees", hash ^. _Wrapped]
-
-blobUrl :: Owner -> Repo -> Hash -> Text
-blobUrl owner repo hash = githubUrl owner repo ["git", "blobs", hash ^. _Wrapped]

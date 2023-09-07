@@ -2,8 +2,7 @@
 
 module Frontend (frontend) where
 
-import Blob (blob)
-import Common.Route (FinalRoute (..), FrontendRoute (..))
+import Common.Route (FrontendRoute (..))
 import Home (home)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
@@ -34,7 +33,5 @@ frontend =
             MkOwnerAndRepo ->
               subPairRoute_ $ \owner ->
                 subPairRoute_ $ \repo ->
-                  subRoute_ $ \case
-                    MkTree -> dyn_ . fmap (tree owner repo) =<< askRoute
-                    MkBlob -> dyn_ . fmap (blob owner repo) =<< askRoute
+                  dyn_ . fmap (tree owner repo) =<< askRoute
     }

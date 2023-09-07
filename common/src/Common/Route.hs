@@ -4,14 +4,12 @@
 module Common.Route
   ( BackendRoute,
     FrontendRoute (..),
-    FinalRoute (..),
     fullRouteEncoder,
   )
 where
 
-import Common.Model (Hash (..), Owner (..), Repo)
+import Common.Model (Owner (..), Repo)
 import Control.Category ((.))
-import Control.Monad.Except (MonadError)
 import Data.Functor.Identity (Identity)
 import Data.Text (Text)
 import Obelisk.Route
@@ -21,9 +19,8 @@ import Obelisk.Route
     R,
     SegmentResult (..),
     mkFullRouteEncoder,
-    pathComponentEncoder,
+    pathOnlyEncoder,
     pathParamEncoder,
-    singlePathSegmentEncoder,
     unitEncoder,
     unwrappedEncoder,
     pattern (:/),
@@ -37,13 +34,9 @@ data BackendRoute :: * -> * where
 
 -- Frontend routes
 
-data FinalRoute :: * -> * where
-  MkTree :: FinalRoute Hash
-  MkBlob :: FinalRoute Hash
-
 data FrontendRoute :: * -> * where
   MkHome :: FrontendRoute ()
-  MkOwnerAndRepo :: FrontendRoute (Owner, (Repo, R FinalRoute))
+  MkOwnerAndRepo :: FrontendRoute (Owner, (Repo, [Text]))
 
 fullRouteEncoder ::
   Encoder
@@ -63,21 +56,13 @@ fullRouteEncoder =
           PathSegment "repo"
             . pathParamEncoder unwrappedEncoder
             . pathParamEncoder unwrappedEncoder
-            $ finalRouteEncoder
+            $ pathOnlyEncoder
     )
-
-finalRouteEncoder ::
-  (MonadError Text check, MonadError Text parse) =>
-  Encoder check parse (R FinalRoute) PageName
-finalRouteEncoder = pathComponentEncoder $ \case
-  MkTree -> PathSegment "tree" $ singlePathSegmentEncoder . unwrappedEncoder
-  MkBlob -> PathSegment "blob" $ singlePathSegmentEncoder . unwrappedEncoder
 
 -- | This is the function that will be used to generate links to frontend routes.
 concat
   <$> mapM
     deriveRouteComponent
     [ ''BackendRoute,
-      ''FrontendRoute,
-      ''FinalRoute
+      ''FrontendRoute
     ]
