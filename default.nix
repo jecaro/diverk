@@ -17,12 +17,27 @@
 with obelisk;
 project ./. ({ pkgs, ... }: {
   shellToolOverrides = self: super: {
-    haskell-language-server = pkgs.haskell.packages.ghc865.haskell-language-server;
-    implicit-hie = pkgs.haskell.packages.ghc865.implicit-hie;
+    haskell-language-server = pkgs.haskell.packages.ghc8107.haskell-language-server;
+    implicit-hie = pkgs.haskell.packages.ghc8107.implicit-hie;
   };
+
+  overrides = self: super: {
+    # The version (v1.1.1) shipped with the haskell platform does not build. We
+    # use a more recent version.
+    lens-aeson = pkgs.haskell.lib.doJailbreak (self.callHackageDirect
+      {
+        pkg = "lens-aeson";
+        ver = "1.1.3";
+        sha256 = "W5/NtS8z3AnJ5fHfKStDiRAAfvwT6cz+qpzYP9oJj6A=";
+      }
+      { });
+  };
+
   staticFiles = import ./static { inherit pkgs; };
+
   android.applicationId = "org.jecaro.diverk";
   android.displayName = "Diverk";
+
   ios.bundleIdentifier = "org.jecaro.diverk";
   ios.bundleName = "Diverk";
 })

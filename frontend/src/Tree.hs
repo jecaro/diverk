@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -29,19 +30,19 @@ import Reflex.Dom.Core
 newtype TreeElt = MkTreeElt
   { trPath :: [Text]
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data Blob = MkBlob
   { blPath :: [Text],
     blContent :: Text
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 makeLensesWith abbreviatedFields ''Blob
 makeLensesWith abbreviatedFields ''TreeElt
 
 data Error = ErStatus Word | ErJSON | ErBase64 Text | ErRequest | ErInvalid
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data State
   = StInitial
@@ -49,7 +50,7 @@ data State
   | StTree [TreeElt]
   | StBlob Blob
   | StError Error
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data LocalEvent
   = LoStartRequest

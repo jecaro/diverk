@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Common.Model (Owner (..), Repo (..), githubURL) where
@@ -7,10 +8,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 newtype Owner = MkOwner {unOwner :: Text}
-  deriving (Eq, Show, Read)
+  deriving stock (Eq, Show, Read)
 
 newtype Repo = MkRepo {unRepo :: Text}
-  deriving (Eq, Show, Read)
+  deriving stock (Eq, Show, Read)
 
 concat
   <$> mapM
