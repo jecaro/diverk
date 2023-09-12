@@ -9,8 +9,6 @@ module Common.Route
   )
 where
 
-import Common.Model (Owner (..), Repo)
-import Control.Category ((.))
 import Data.Functor.Identity (Identity)
 import Data.Text (Text)
 import Obelisk.Route
@@ -21,9 +19,7 @@ import Obelisk.Route
     SegmentResult (..),
     mkFullRouteEncoder,
     pathOnlyEncoder,
-    pathParamEncoder,
     unitEncoder,
-    unwrappedEncoder,
     pattern (:/),
   )
 import Obelisk.Route.TH (deriveRouteComponent)
@@ -37,7 +33,8 @@ data BackendRoute :: * -> * where
 
 data FrontendRoute :: * -> * where
   MkHome :: FrontendRoute ()
-  MkOwnerAndRepo :: FrontendRoute (Owner, (Repo, [Text]))
+  MkConfiguration :: FrontendRoute ()
+  MkBrowse :: FrontendRoute [Text]
 
 fullRouteEncoder ::
   Encoder
@@ -53,11 +50,8 @@ fullRouteEncoder =
     )
     ( \case
         MkHome -> PathEnd $ unitEncoder mempty
-        MkOwnerAndRepo ->
-          PathSegment "repo"
-            . pathParamEncoder unwrappedEncoder
-            . pathParamEncoder unwrappedEncoder
-            $ pathOnlyEncoder
+        MkBrowse -> PathSegment "repo" pathOnlyEncoder
+        MkConfiguration -> PathSegment "config" $ unitEncoder mempty
     )
 
 -- | This is the function that will be used to generate links to frontend routes.

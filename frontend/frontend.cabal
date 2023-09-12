@@ -68,6 +68,7 @@ library
     common,
     extra,
     jsaddle,
+    jsaddle-dom,
     lens,
     lens-aeson,
     obelisk-executable-config-lookup,
@@ -78,7 +79,9 @@ library
     text,
   exposed-modules:
     Frontend
+  other-modules:
     Home
+    LocalStorage
     Tree
 
 executable frontend

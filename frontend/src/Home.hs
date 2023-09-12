@@ -1,31 +1,21 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 module Home (home) where
 
 import Common.Model
   ( Owner (..),
     Repo (..),
   )
-import Common.Route (FrontendRoute (..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink)
 import Reflex.Dom.Core hiding (Error)
 
-home ::
-  ( DomBuilder t m,
-    PostBuild t m,
-    Prerender t m,
-    RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m
-  ) =>
-  m ()
-home = do
-  dynOwner <- fmap MkOwner <$> inputWidget "Owner" "jecaro"
-  dynRepo <- fmap MkRepo <$> inputWidget "Repo" "mprisqueeze"
-  dyn_ . ffor (zipDyn dynOwner dynRepo) $ \(owner, repo) -> do
-    el "div" $ routeLink (MkOwnerAndRepo :/ (owner, (repo, []))) $ text "Go to repo"
+home :: (DomBuilder t m) => Maybe Owner -> Maybe Repo -> m (Event t (Owner, Repo))
+home mbOwner mbRepo = do
+  dyOwner <- fmap MkOwner <$> inputWidget "Owner" (maybe "" unOwner mbOwner)
+  dyRepo <- fmap MkRepo <$> inputWidget "Repo" (maybe "" unRepo mbRepo)
+  evGo <- button "Go"
+  let dyOwnerAndRepo = zipDyn dyOwner dyRepo
+
+  pure $ tag (current dyOwnerAndRepo) evGo
 
 inputWidget :: (DomBuilder t m) => Text -> Text -> m (Dynamic t Text)
 inputWidget label initialValue =

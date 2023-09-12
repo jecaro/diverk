@@ -127,14 +127,7 @@ tree owner repo path' = do
     StTree objects ->
       forM_ objects $ \object ->
         el "div" $
-          routeLink
-            ( MkOwnerAndRepo
-                :/ ( owner,
-                     ( repo,
-                       object ^. path
-                     )
-                   )
-            )
+          routeLink (MkBrowse :/ object ^. path)
             . text
             $ T.intercalate "/" $ object ^. path
     StBlob object ->
