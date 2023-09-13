@@ -84,6 +84,7 @@ library
     Configuration
     LocalStorage
     Reflex.Extra
+    Request
     Tree
 
 executable frontend

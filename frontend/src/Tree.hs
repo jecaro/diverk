@@ -4,7 +4,7 @@
 
 module Tree (tree) where
 
-import Common.Model (Owner, Repo, contentsURL)
+import Common.Model (Owner, Repo)
 import Common.Route (FrontendRoute (..))
 import Control.Lens
   ( abbreviatedFields,
@@ -26,6 +26,8 @@ import Data.Text.Encoding.Base64 (decodeBase64)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink)
 import Reflex.Dom.Core
+import Reflex.Extra (onClient)
+import Request (contentsRequest)
 
 newtype TreeElt = MkTreeElt
   { trPath :: [Text]
@@ -110,12 +112,8 @@ tree ::
   m ()
 tree owner repo path' = do
   evRequest <-
-    (xhrRequest "GET" (contentsURL owner repo path') def <$) <$> getPostBuild
-  evResponse <-
-    switchDyn
-      <$> prerender
-        (pure never)
-        (performRequestAsyncWithError evRequest)
+    (contentsRequest owner repo path' <$) <$> getPostBuild
+  evResponse <- onClient $ performRequestAsyncWithError evRequest
 
   dynState <-
     foldDyn updateState StInitial $

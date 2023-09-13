@@ -1,11 +1,6 @@
 module Configuration (configuration) where
 
-import Common.Model
-  ( Owner (..),
-    Repo (..),
-    contentsURL,
-    usersURL,
-  )
+import Common.Model (Owner (..), Repo (..))
 import Control.Lens ((^.))
 import Data.List.NonEmpty (unzip)
 import Data.Map (Map)
@@ -14,6 +9,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
+import Request (contentsRequest, usersRequest)
 import Prelude hiding (unzip)
 
 configuration ::
@@ -31,13 +27,13 @@ configuration mbConfig = do
   dyRepo <- fmap MkRepo <$> inputWidget "Repo" (maybe "" unRepo mbRepo)
 
   evUserResponse <-
-    onClient . performRequestAsyncWithError $ userRequest <$> updated dyOwner
+    onClient . performRequestAsyncWithError $ usersRequest <$> updated dyOwner
   beUserExists <- hold (isJust mbConfig) $ is200 <$> evUserResponse
 
   let evRepoRequest =
         gate beUserExists
           . updated
-          $ repoRequest <$> dyOwner <*> dyRepo
+          $ contentsRequest <$> dyOwner <*> dyRepo <*> pure []
   evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
   dyRepoExists <- holdDyn (isJust mbConfig) $ is200 <$> evRepoResponse
 
@@ -51,12 +47,6 @@ configuration mbConfig = do
 
   let beOwnerAndRepo = current $ zipDyn dyOwner dyRepo
   pure $ tag beOwnerAndRepo evGo
-
-userRequest :: Owner -> XhrRequest ()
-userRequest owner = xhrRequest "GET" (usersURL owner) def
-
-repoRequest :: Owner -> Repo -> XhrRequest ()
-repoRequest owner repo = xhrRequest "GET" (contentsURL owner repo []) def
 
 enableAttr :: Bool -> Map Text Text
 enableAttr True = mempty
