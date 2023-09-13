@@ -7,12 +7,12 @@ module Frontend (frontend) where
 
 import Common.Model (Owner (MkOwner, unOwner), Repo (MkRepo, unRepo))
 import Common.Route (FrontendRoute (..))
+import Configuration (configuration)
 import Control.Arrow ((***))
 import Control.Lens (both)
 import Control.Monad.Fix (MonadFix)
 import Data.Bitraversable (bisequence)
 import Data.Functor (($>))
-import Home (home)
 import Language.Javascript.JSaddle (liftJSM)
 import LocalStorage (load, save)
 import Obelisk.Frontend (Frontend (..))
@@ -20,6 +20,7 @@ import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
 import Reflex.Dom.Core
+import Reflex.Extra (onClient)
 import Tree (tree)
 
 data State
@@ -84,7 +85,7 @@ route ::
   State ->
   m (Event t State)
 route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
-  evOk <- home (fst <$> mbConfig) (snd <$> mbConfig)
+  evOk <- configuration mbConfig
   evSaved <- setToLocalStorage evOk
   setRoute $ MkBrowse :/ [] <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
@@ -105,8 +106,8 @@ getFromLocalStorage ::
     DomBuilder t m
   ) =>
   m (Event t (Maybe (Owner, Repo)))
-getFromLocalStorage = do
-  fmap switchDyn . prerender (pure never) $ do
+getFromLocalStorage =
+  onClient $ do
     ev <- getPostBuild
     performEvent
       ( ev
@@ -126,8 +127,8 @@ setToLocalStorage ::
   ) =>
   Event t (Owner, Repo) ->
   m (Event t (Owner, Repo))
-setToLocalStorage ev = do
-  fmap switchDyn . prerender (pure never) $
+setToLocalStorage ev =
+  onClient $
     performEvent
       ( ffor ev $ \(owner, repo) ->
           liftJSM

@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Common.Model (Owner (..), Repo (..), githubURL) where
+module Common.Model (Owner (..), Repo (..), contentsURL, usersURL) where
 
 import Control.Lens (makeWrapped, (^.), _Wrapped)
 import Data.Text (Text)
@@ -20,12 +20,25 @@ concat
       ''Repo
     ]
 
-githubURL :: Owner -> Repo -> [Text] -> Text
-githubURL owner repo path =
+githubBaseURL :: Text
+githubBaseURL = "https://api.github.com"
+
+contentsURL :: Owner -> Repo -> [Text] -> Text
+contentsURL owner repo path =
   T.intercalate "/" $
-    [ "https://api.github.com/repos",
+    [ githubBaseURL,
+      "repos",
       owner ^. _Wrapped,
       repo ^. _Wrapped,
       "contents"
     ]
       <> path
+
+usersURL :: Owner -> Text
+usersURL owner =
+  T.intercalate
+    "/"
+    [ githubBaseURL,
+      "users",
+      owner ^. _Wrapped
+    ]

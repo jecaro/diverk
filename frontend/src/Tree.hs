@@ -4,7 +4,7 @@
 
 module Tree (tree) where
 
-import Common.Model (Owner, Repo, githubURL)
+import Common.Model (Owner, Repo, contentsURL)
 import Common.Route (FrontendRoute (..))
 import Control.Lens
   ( abbreviatedFields,
@@ -110,7 +110,7 @@ tree ::
   m ()
 tree owner repo path' = do
   evRequest <-
-    (xhrRequest "GET" (githubURL owner repo path') def <$) <$> getPostBuild
+    (xhrRequest "GET" (contentsURL owner repo path') def <$) <$> getPostBuild
   evResponse <-
     switchDyn
       <$> prerender

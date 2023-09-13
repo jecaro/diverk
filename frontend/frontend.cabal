@@ -66,6 +66,7 @@ library
     base,
     base64,
     common,
+    containers,
     extra,
     jsaddle,
     jsaddle-dom,
@@ -80,8 +81,9 @@ library
   exposed-modules:
     Frontend
   other-modules:
-    Home
+    Configuration
     LocalStorage
+    Reflex.Extra
     Tree
 
 executable frontend
