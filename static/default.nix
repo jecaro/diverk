@@ -4,7 +4,7 @@ let
   # See https://github.com/svanderburg/node2nix#using-the-nodejs-environment-in-other-nix-derivations
   nodePkgs = (pkgs.callPackage ./src {
     inherit pkgs;
-    nodejs = pkgs.nodejs-12_x;
+    nodejs = pkgs.nodejs-14_x;
   }).shell.nodeDependencies;
 
   # The frontend source files have to be passed in so that tailwind's purge option works

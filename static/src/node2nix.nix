@@ -1,5 +1,7 @@
-(import (builtins.fetchTarball {
-     name = "nixpkgs-unstable_2020-11-18";
-     url = "https://github.com/nixos/nixpkgs/archive/4f3475b113c93d204992838aecafa89b1b3ccfde.tar.gz";
-     sha256 = "158iik656ds6i6pc672w54cnph4d44d0a218dkq6npzrbhd3vvbg";
-   }) {}).nodePackages.node2nix
+(import
+  (builtins.fetchTarball {
+    name = "nixpkgs";
+    url = "https://github.com/NixOS/nixpkgs/archive/3aad50c30c826430b0270fcf8264c8c41b005403.tar.gz";
+    sha256 = "0xwqsf08sywd23x0xvw4c4ghq0l28w2ki22h0bdn766i16z9q2gr";
+  })
+  { }).nodePackages.node2nix

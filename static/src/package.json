@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "author": "Jean-Charles Quillet",
   "dependencies": {
-    "@tailwindcss/ui": "^0.7.2",
-    "autoprefixer": "^10.1.0",
-    "postcss-cli": "^8.3.1",
-    "postcss-import": "^14.0.0",
-    "tailwindcss": "^2.0.2",
-    "cssnano": "^4.1.10"
+    "autoprefixer": "^10.4.15",
+    "cssnano": "^6.0.1",
+    "postcss": "^8.4.29",
+    "postcss-cli": "^10.1.0",
+    "postcss-import": "^15.1.0",
+    "tailwindcss": "^3.3.3"
   }
 }
