@@ -1,20 +1,32 @@
 module Request (contentsRequest, usersRequest) where
 
-import Common.Model (Owner, Repo)
-import Control.Lens ((^.), _Wrapped)
+import Common.Model (Owner, Repo, Token)
+import Control.Lens ((<>~), (^.), _Wrapped)
+import Data.Map (Map)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core
 
-usersRequest :: Owner -> XhrRequest ()
-usersRequest owner = xhrRequest "GET" (usersURL owner) def
+usersRequest :: Maybe Token -> Owner -> XhrRequest ()
+usersRequest mbToken owner =
+  xhrRequest
+    "GET"
+    (usersURL owner)
+    (requestConfig mbToken)
 
-contentsRequest :: Owner -> Repo -> [Text] -> XhrRequest ()
-contentsRequest owner repo path =
+contentsRequest :: Maybe Token -> Owner -> Repo -> [Text] -> XhrRequest ()
+contentsRequest mbToken owner repo path =
   xhrRequest
     "GET"
     (contentsURL owner repo path)
-    def
+    (requestConfig mbToken)
+
+requestConfig :: Maybe Token -> XhrRequestConfig ()
+requestConfig mbToken = def & xhrRequestConfig_headers <>~ tokenHeader mbToken
+
+tokenHeader :: Maybe Token -> Map Text Text
+tokenHeader (Just token) = "Authorization" =: ("Bearer " <> token ^. _Wrapped)
+tokenHeader Nothing = mempty
 
 contentsURL :: Owner -> Repo -> [Text] -> Text
 contentsURL owner repo path =

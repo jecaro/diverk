@@ -5,16 +5,22 @@
 
 module Frontend (frontend) where
 
-import Common.Model (Owner (MkOwner, unOwner), Repo (MkRepo, unRepo))
+import Common.Model
+  ( Config (..),
+    Owner (..),
+    Repo (..),
+    Token (..),
+    owner,
+    repo,
+    token,
+  )
 import Common.Route (FrontendRoute (..))
 import Configuration (configuration)
-import Control.Arrow ((***))
-import Control.Lens (both)
+import Control.Lens ((^.), _Wrapped)
 import Control.Monad.Fix (MonadFix)
-import Data.Bitraversable (bisequence)
 import Data.Functor (($>))
 import Language.Javascript.JSaddle (liftJSM)
-import LocalStorage (load, save)
+import LocalStorage (clear, load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
@@ -27,7 +33,7 @@ data State
   = -- | The initial state: before the config is loaded from the local storage
     MkInit
   | -- | After the config is loaded from the local storage
-    MkConfigLoaded (Maybe (Owner, Repo))
+    MkConfigLoaded (Maybe Config)
   deriving stock (Show, Eq)
 
 frontend :: Frontend (R FrontendRoute)
@@ -89,8 +95,8 @@ route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
   evSaved <- setToLocalStorage evOk
   setRoute $ MkBrowse :/ [] <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
-route (MkBrowse :/ path) (MkConfigLoaded (Just (owner, repo))) = do
-  tree owner repo path
+route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
+  tree config path
   pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
   setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
@@ -105,7 +111,7 @@ getFromLocalStorage ::
   ( Prerender t m,
     DomBuilder t m
   ) =>
-  m (Event t (Maybe (Owner, Repo)))
+  m (Event t (Maybe Config))
 getFromLocalStorage =
   onClient $ do
     ev <- getPostBuild
@@ -113,10 +119,10 @@ getFromLocalStorage =
       ( ev
           $> liftJSM
             ( do
-                mbTupleOfText <-
-                  bisequence
-                    <$> both load ("owner", "repo")
-                pure $ (MkOwner *** MkRepo) <$> mbTupleOfText
+                mbOwner <- fmap MkOwner <$> load "owner"
+                mbRepo <- fmap MkRepo <$> load "repo"
+                mbToken <- fmap MkToken <$> load "token"
+                pure $ MkConfig <$> mbOwner <*> mbRepo <*> pure mbToken
             )
       )
 
@@ -125,16 +131,19 @@ setToLocalStorage ::
   ( Prerender t m,
     Applicative m
   ) =>
-  Event t (Owner, Repo) ->
-  m (Event t (Owner, Repo))
+  Event t Config ->
+  m (Event t Config)
 setToLocalStorage ev =
   onClient $
     performEvent
-      ( ffor ev $ \(owner, repo) ->
+      ( ffor ev $ \config ->
           liftJSM
             ( do
-                save "owner" $ unOwner owner
-                save "repo" $ unRepo repo
-                pure (owner, repo)
+                save "owner" $ config ^. owner . _Wrapped
+                save "repo" $ config ^. repo . _Wrapped
+                case config ^. token of
+                  Just token' -> save "token" $ token' ^. _Wrapped
+                  Nothing -> clear "token"
+                pure config
             )
       )

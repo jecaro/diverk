@@ -4,7 +4,7 @@
 
 module Tree (tree) where
 
-import Common.Model (Owner, Repo)
+import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
 import Control.Lens
   ( abbreviatedFields,
@@ -106,13 +106,12 @@ tree ::
     SetRoute t (R FrontendRoute) m,
     RouteToUrl (R FrontendRoute) m
   ) =>
-  Owner ->
-  Repo ->
+  Config ->
   [Text] ->
   m ()
-tree owner repo path' = do
+tree MkConfig {..} path' = do
   evRequest <-
-    (contentsRequest owner repo path' <$) <$> getPostBuild
+    (contentsRequest coToken coOwner coRepo path' <$) <$> getPostBuild
   evResponse <- onClient $ performRequestAsyncWithError evRequest
 
   dynState <-

@@ -1,10 +1,17 @@
 module Configuration (configuration) where
 
-import Common.Model (Owner (..), Repo (..))
-import Control.Lens ((^.))
-import Data.List.NonEmpty (unzip)
+import Common.Model
+  ( Config (..),
+    Owner (..),
+    Repo (..),
+    Token (..),
+    owner,
+    repo,
+    token,
+  )
+import Control.Lens ((^.), (^?), _Just, _Wrapped)
 import Data.Map (Map)
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
@@ -18,22 +25,26 @@ configuration ::
     MonadHold t m,
     PostBuild t m
   ) =>
-  Maybe (Owner, Repo) ->
-  m (Event t (Owner, Repo))
+  Maybe Config ->
+  m (Event t Config)
 configuration mbConfig = do
-  let (mbOwner, mbRepo) = unzip mbConfig
+  let mbOwner = mbConfig ^? _Just . owner . _Wrapped
+      mbRepo = mbConfig ^? _Just . repo . _Wrapped
+      mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
 
-  dyOwner <- fmap MkOwner <$> inputWidget "Owner" (maybe "" unOwner mbOwner)
-  dyRepo <- fmap MkRepo <$> inputWidget "Repo" (maybe "" unRepo mbRepo)
+  dyOwner <- fmap MkOwner <$> inputWidget "Owner" (fromMaybe "" mbOwner)
+  dyRepo <- fmap MkRepo <$> inputWidget "Repo" (fromMaybe "" mbRepo)
+  dyToken <- fmap mkToken <$> inputWidget "Token" (fromMaybe "" mbToken)
 
   evUserResponse <-
-    onClient . performRequestAsyncWithError $ usersRequest <$> updated dyOwner
+    onClient . performRequestAsyncWithError . updated $
+      usersRequest <$> dyToken <*> dyOwner
   beUserExists <- hold (isJust mbConfig) $ is200 <$> evUserResponse
 
   let evRepoRequest =
         gate beUserExists
           . updated
-          $ contentsRequest <$> dyOwner <*> dyRepo <*> pure []
+          $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
   evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
   dyRepoExists <- holdDyn (isJust mbConfig) $ is200 <$> evRepoResponse
 
@@ -45,8 +56,12 @@ configuration mbConfig = do
         $ text "Go"
     pure $ domEvent Click ev
 
-  let beOwnerAndRepo = current $ zipDyn dyOwner dyRepo
-  pure $ tag beOwnerAndRepo evGo
+  let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
+  pure $ tag beConfig evGo
+
+mkToken :: Text -> Maybe Token
+mkToken "" = Nothing
+mkToken txToken = Just $ MkToken txToken
 
 enableAttr :: Bool -> Map Text Text
 enableAttr True = mempty
