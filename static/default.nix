@@ -11,6 +11,12 @@ let
   # See https://tailwindcss.com/docs/optimizing-for-production#removing-unused-css
   frontendSrcFiles = ../frontend;
 
+  fontawesome = pkgs.fetchFromGitHub {
+    owner = "FortAwesome";
+    repo = "Font-Awesome";
+    rev = "6.4.2";
+    sha256 = "/utIhn7CWxlWXshcCUj57WuObRmLTGhTfQo7L6FDHqA=";
+  };
 in
 pkgs.stdenv.mkDerivation {
   name = "static";
@@ -29,5 +35,15 @@ pkgs.stdenv.mkDerivation {
 
     # Run the postcss compiler:
     postcss css/styles.css -o $out/css/styles.css
+
+    # Setting up fontawesome:
+    mkdir -p $out/fontawesome
+    mkdir -p $out/fontawesome/css
+
+    # Copying the fonts
+    cp -r ${fontawesome}/webfonts $out/fontawesome
+
+    # Run the postcss compiler:
+    postcss ${fontawesome}/css/all.css -o $out/fontawesome/css/all.css
   '';
 }

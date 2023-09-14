@@ -53,6 +53,13 @@ frontendHead = do
         <> "rel" =: "stylesheet"
     )
     blank
+  elAttr
+    "link"
+    ( "href" =: $(static "fontawesome/css/all.css")
+        <> "type" =: "text/css"
+        <> "rel" =: "stylesheet"
+    )
+    blank
 
 frontendBody ::
   forall t m.
