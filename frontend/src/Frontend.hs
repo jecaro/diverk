@@ -24,7 +24,7 @@ import LocalStorage (clear, load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
+import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute, routeLink)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import Tree (tree)
@@ -46,6 +46,13 @@ frontend =
 frontendHead :: DomBuilder t m => m ()
 frontendHead = do
   el "title" $ text "Diverk"
+  elAttr
+    "meta"
+    ( "name" =: "viewport"
+        <> "contents" =: "width=device-width, initial-scale=1.0"
+    )
+    blank
+
   elAttr
     "link"
     ( "href" =: $(static "css/styles.css")
@@ -73,17 +80,29 @@ frontendBody ::
     RouteToUrl (R FrontendRoute) m
   ) =>
   m ()
-frontendBody =
-  elAttr "div" ("class" =: "mt-4 mb-4 mr-4 ml-4 space-y-4") $ do
-    evSettingsLoaded <- fmap MkConfigLoaded <$> getFromLocalStorage
-    dyRoute <- askRoute
+frontendBody = do
+  dyRoute <- askRoute
+  let onConfigRoute = (== MkConfiguration :/ ()) <$> dyRoute
 
-    rec dyState <-
-          holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
-        evSettingsSaved <-
-          switchHold never =<< dyn (route <$> dyRoute <*> dyState)
+  dyn_ . ffor onConfigRoute $ \case
+    True -> blank
+    False ->
+      elAttr "div" ("class" =: "fixed top-8 right-8") $
+        routeLink (MkConfiguration :/ ()) $
+          elAttr "i" ("class" =: "fa-solid fa-gear fa-2xl") blank
 
-    pure ()
+  elAttr
+    "div"
+    ("class" =: "h-screen overflow-y-scroll flex flex-col gap-4 p-4")
+    $ do
+      evSettingsLoaded <- fmap MkConfigLoaded <$> getFromLocalStorage
+
+      rec dyState <-
+            holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
+          evSettingsSaved <-
+            switchHold never =<< dyn (route <$> dyRoute <*> dyState)
+
+      pure ()
 
 route ::
   ( DomBuilder t m,

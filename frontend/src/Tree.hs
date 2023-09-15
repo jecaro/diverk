@@ -128,6 +128,6 @@ tree MkConfig {..} path' = do
             . text
             $ T.intercalate "/" $ object ^. path
     StBlob object ->
-      elAttr "div" ("class" =: "whitespace-pre") $
+      elAttr "div" ("class" =: "whitespace-pre-wrap") $
         text $ object ^. content
     _ -> blank
