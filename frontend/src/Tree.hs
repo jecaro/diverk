@@ -13,6 +13,8 @@ import Control.Lens
     to,
     toListOf,
     (^.),
+    (^?),
+    _last,
   )
 import Control.Monad (forM_)
 import Control.Monad.Fix (MonadFix)
@@ -20,6 +22,7 @@ import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Bifunctor (Bifunctor (first))
 import Data.Either.Extra (maybeToEither)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding.Base64 (decodeBase64)
@@ -126,7 +129,8 @@ tree MkConfig {..} path' = do
         el "div" $
           routeLink (MkBrowse :/ object ^. path)
             . text
-            $ T.intercalate "/" $ object ^. path
+            . fromMaybe "/"
+            $ object ^? path . _last
     StBlob object ->
       elAttr "div" ("class" =: "whitespace-pre-wrap") $
         text $ object ^. content

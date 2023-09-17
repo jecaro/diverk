@@ -16,15 +16,23 @@ import Common.Model
   )
 import Common.Route (FrontendRoute (..))
 import Configuration (configuration)
-import Control.Lens ((^.), _Wrapped)
+import Control.Lens ((^.), (^?), _Wrapped, _last)
+import Control.Monad (forM_)
 import Control.Monad.Fix (MonadFix)
 import Data.Functor (($>))
+import Data.List (inits)
 import Language.Javascript.JSaddle (liftJSM)
 import LocalStorage (clear, load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute, routeLink)
+import Obelisk.Route.Frontend
+  ( RouteToUrl,
+    Routed,
+    SetRoute (..),
+    askRoute,
+    routeLink,
+  )
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import Tree (tree)
@@ -81,28 +89,15 @@ frontendBody ::
   ) =>
   m ()
 frontendBody = do
+  evSettingsLoaded <- fmap MkConfigLoaded <$> getFromLocalStorage
   dyRoute <- askRoute
-  let onConfigRoute = (== MkConfiguration :/ ()) <$> dyRoute
 
-  dyn_ . ffor onConfigRoute $ \case
-    True -> blank
-    False ->
-      elAttr "div" ("class" =: "fixed top-8 right-8") $
-        routeLink (MkConfiguration :/ ()) $
-          elAttr "i" ("class" =: "fa-solid fa-gear fa-2xl") blank
+  rec dyState <-
+        holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
+      evSettingsSaved <-
+        switchHold never =<< dyn (route <$> dyRoute <*> dyState)
 
-  elAttr
-    "div"
-    ("class" =: "h-screen overflow-y-scroll flex flex-col gap-4 p-4")
-    $ do
-      evSettingsLoaded <- fmap MkConfigLoaded <$> getFromLocalStorage
-
-      rec dyState <-
-            holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
-          evSettingsSaved <-
-            switchHold never =<< dyn (route <$> dyRoute <*> dyState)
-
-      pure ()
+  pure ()
 
 route ::
   ( DomBuilder t m,
@@ -117,12 +112,30 @@ route ::
   State ->
   m (Event t State)
 route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
-  evOk <- configuration mbConfig
-  evSaved <- setToLocalStorage evOk
-  setRoute $ MkBrowse :/ [] <$ evSaved
-  pure $ MkConfigLoaded . Just <$> evSaved
+  elAttr "div" ("class" =: "flex flex-col gap-4 p-4") $ do
+    evOk <- configuration mbConfig
+    evSaved <- setToLocalStorage evOk
+    setRoute $ MkBrowse :/ [] <$ evSaved
+    pure $ MkConfigLoaded . Just <$> evSaved
 route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
-  tree config path
+  elAttr "nav" ("class" =: "sticky shadow-md top-0 flex flex-col p-4 bg-white") $
+    elAttr "ol" ("class" =: "flex gap-x-4  w-full") $ do
+      forM_ (inits path) $ \partialPath ->
+        el "li" $ do
+          let homeOrText =
+                maybe
+                  (elAttr "i" ("class" =: "fa-solid fa-house") blank)
+                  text
+                  $ partialPath ^? _last
+          routeLink (MkBrowse :/ partialPath) homeOrText
+      elAttr "li" ("class" =: "grow") blank
+      el "li" $
+        routeLink (MkConfiguration :/ ()) $
+          elAttr "i" ("class" =: "fa-solid fa-gear") blank
+  elAttr
+    "div"
+    ("class" =: "flex flex-col gap-4 p-4 overflow-y-scroll")
+    $ tree config path
   pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
   setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
