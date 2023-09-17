@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Tree (tree) where
+module Browse (browse) where
 
 import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
@@ -22,6 +22,7 @@ import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Bifunctor (Bifunctor (first))
 import Data.Either.Extra (maybeToEither)
+import Data.List (inits)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -100,7 +101,7 @@ responseToState response =
     parsePath = preview $ key "path" . _String . to splitPath
     splitPath = T.split (== '/')
 
-tree ::
+browse ::
   ( DomBuilder t m,
     PostBuild t m,
     Prerender t m,
@@ -112,7 +113,47 @@ tree ::
   Config ->
   [Text] ->
   m ()
-tree MkConfig {..} path' = do
+browse config path' = do
+  navbar path'
+  contentWidget config path'
+
+navbar ::
+  ( RouteToUrl (R FrontendRoute) m,
+    SetRoute t (R FrontendRoute) m,
+    DomBuilder t m,
+    Prerender t m
+  ) =>
+  [Text] ->
+  m ()
+navbar path' = do
+  elAttr "nav" ("class" =: "sticky shadow-md top-0 flex flex-col p-4 bg-white") $
+    elAttr "ol" ("class" =: "flex gap-x-4  w-full") $ do
+      forM_ (inits path') $ \intermediatePath ->
+        el "li" $
+          routeLink (MkBrowse :/ intermediatePath) $ homeOrText intermediatePath
+      -- spacer
+      elAttr "li" ("class" =: "grow") blank
+      el "li" $ routeLink (MkConfiguration :/ ()) gear
+  where
+    house = elAttr "i" ("class" =: "fa-solid fa-house") blank
+    gear = elAttr "i" ("class" =: "fa-solid fa-gear") blank
+    homeOrText [] = house
+    homeOrText [x] = text x
+    homeOrText (_ : xs) = homeOrText xs
+
+contentWidget ::
+  ( RouteToUrl (R FrontendRoute) m,
+    SetRoute t (R FrontendRoute) m,
+    DomBuilder t m,
+    PostBuild t m,
+    MonadHold t m,
+    MonadFix m,
+    Prerender t m
+  ) =>
+  Config ->
+  [Text] ->
+  m ()
+contentWidget MkConfig {..} path' = do
   evRequest <-
     (contentsRequest coToken coOwner coRepo path' <$) <$> getPostBuild
   evResponse <- onClient $ performRequestAsyncWithError evRequest
@@ -122,16 +163,17 @@ tree MkConfig {..} path' = do
       leftmost
         [LoStartRequest <$ evRequest, LoEndRequest <$> evResponse]
 
-  dyn_ . ffor dynState $ \case
-    StError err -> el "div" . text . T.pack $ show err
-    StTree objects ->
-      forM_ objects $ \object ->
-        el "div" $
-          routeLink (MkBrowse :/ object ^. path)
-            . text
-            . fromMaybe "/"
-            $ object ^? path . _last
-    StBlob object ->
-      elAttr "div" ("class" =: "whitespace-pre-wrap") $
-        text $ object ^. content
-    _ -> blank
+  elAttr "div" ("class" =: "flex flex-col gap-4 p-4 overflow-auto") $
+    dyn_ . ffor dynState $ \case
+      StError err -> el "div" . text . T.pack $ show err
+      StTree objects ->
+        forM_ objects $ \object ->
+          el "div" $
+            routeLink (MkBrowse :/ object ^. path)
+              . text
+              . fromMaybe "/"
+              $ object ^? path . _last
+      StBlob object ->
+        elAttr "div" ("class" =: "whitespace-pre-wrap") $
+          text $ object ^. content
+      _ -> blank

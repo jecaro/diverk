@@ -81,11 +81,12 @@ library
   exposed-modules:
     Frontend
   other-modules:
+    Browse
     Configuration
+    JSDOM.Storage.Extra
     LocalStorage
     Reflex.Extra
     Request
-    Tree
 
 executable frontend
   import: defaults

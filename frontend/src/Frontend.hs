@@ -5,37 +5,17 @@
 
 module Frontend (frontend) where
 
-import Common.Model
-  ( Config (..),
-    Owner (..),
-    Repo (..),
-    Token (..),
-    owner,
-    repo,
-    token,
-  )
+import Browse (browse)
+import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
 import Configuration (configuration)
-import Control.Lens ((^.), (^?), _Wrapped, _last)
-import Control.Monad (forM_)
 import Control.Monad.Fix (MonadFix)
-import Data.Functor (($>))
-import Data.List (inits)
-import Language.Javascript.JSaddle (liftJSM)
-import LocalStorage (clear, load, save)
+import LocalStorage (load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend
-  ( RouteToUrl,
-    Routed,
-    SetRoute (..),
-    askRoute,
-    routeLink,
-  )
+import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
 import Reflex.Dom.Core
-import Reflex.Extra (onClient)
-import Tree (tree)
 
 data State
   = -- | The initial state: before the config is loaded from the local storage
@@ -89,7 +69,7 @@ frontendBody ::
   ) =>
   m ()
 frontendBody = do
-  evSettingsLoaded <- fmap MkConfigLoaded <$> getFromLocalStorage
+  evSettingsLoaded <- fmap MkConfigLoaded <$> load
   dyRoute <- askRoute
 
   rec dyState <-
@@ -112,30 +92,12 @@ route ::
   State ->
   m (Event t State)
 route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
-  elAttr "div" ("class" =: "flex flex-col gap-4 p-4") $ do
-    evOk <- configuration mbConfig
-    evSaved <- setToLocalStorage evOk
-    setRoute $ MkBrowse :/ [] <$ evSaved
-    pure $ MkConfigLoaded . Just <$> evSaved
+  evOk <- configuration mbConfig
+  evSaved <- save evOk
+  setRoute $ MkBrowse :/ [] <$ evSaved
+  pure $ MkConfigLoaded . Just <$> evSaved
 route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
-  elAttr "nav" ("class" =: "sticky shadow-md top-0 flex flex-col p-4 bg-white") $
-    elAttr "ol" ("class" =: "flex gap-x-4  w-full") $ do
-      forM_ (inits path) $ \partialPath ->
-        el "li" $ do
-          let homeOrText =
-                maybe
-                  (elAttr "i" ("class" =: "fa-solid fa-house") blank)
-                  text
-                  $ partialPath ^? _last
-          routeLink (MkBrowse :/ partialPath) homeOrText
-      elAttr "li" ("class" =: "grow") blank
-      el "li" $
-        routeLink (MkConfiguration :/ ()) $
-          elAttr "i" ("class" =: "fa-solid fa-gear") blank
-  elAttr
-    "div"
-    ("class" =: "flex flex-col gap-4 p-4 overflow-y-scroll")
-    $ tree config path
+  browse config path
   pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
   setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
@@ -144,45 +106,3 @@ route _ (MkConfigLoaded Nothing) = do
   setRoute . (MkConfiguration :/ () <$) =<< getPostBuild
   pure never
 route _ _ = pure never
-
-getFromLocalStorage ::
-  forall m t.
-  ( Prerender t m,
-    DomBuilder t m
-  ) =>
-  m (Event t (Maybe Config))
-getFromLocalStorage =
-  onClient $ do
-    ev <- getPostBuild
-    performEvent
-      ( ev
-          $> liftJSM
-            ( do
-                mbOwner <- fmap MkOwner <$> load "owner"
-                mbRepo <- fmap MkRepo <$> load "repo"
-                mbToken <- fmap MkToken <$> load "token"
-                pure $ MkConfig <$> mbOwner <*> mbRepo <*> pure mbToken
-            )
-      )
-
-setToLocalStorage ::
-  forall m t.
-  ( Prerender t m,
-    Applicative m
-  ) =>
-  Event t Config ->
-  m (Event t Config)
-setToLocalStorage ev =
-  onClient $
-    performEvent
-      ( ffor ev $ \config ->
-          liftJSM
-            ( do
-                save "owner" $ config ^. owner . _Wrapped
-                save "repo" $ config ^. repo . _Wrapped
-                case config ^. token of
-                  Just token' -> save "token" $ token' ^. _Wrapped
-                  Nothing -> clear "token"
-                pure config
-            )
-      )

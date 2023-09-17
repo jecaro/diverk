@@ -28,36 +28,37 @@ configuration ::
   Maybe Config ->
   m (Event t Config)
 configuration mbConfig = do
-  let mbOwner = mbConfig ^? _Just . owner . _Wrapped
-      mbRepo = mbConfig ^? _Just . repo . _Wrapped
-      mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
+  elAttr "div" ("class" =: "flex flex-col gap-4 p-4") $ do
+    dyOwner <- fmap MkOwner <$> inputWidget "Owner" (fromMaybe "" mbOwner)
+    dyRepo <- fmap MkRepo <$> inputWidget "Repo" (fromMaybe "" mbRepo)
+    dyToken <- fmap mkToken <$> inputWidget "Token" (fromMaybe "" mbToken)
 
-  dyOwner <- fmap MkOwner <$> inputWidget "Owner" (fromMaybe "" mbOwner)
-  dyRepo <- fmap MkRepo <$> inputWidget "Repo" (fromMaybe "" mbRepo)
-  dyToken <- fmap mkToken <$> inputWidget "Token" (fromMaybe "" mbToken)
+    evUserResponse <-
+      onClient . performRequestAsyncWithError . updated $
+        usersRequest <$> dyToken <*> dyOwner
+    beUserExists <- hold (isJust mbConfig) $ is200 <$> evUserResponse
 
-  evUserResponse <-
-    onClient . performRequestAsyncWithError . updated $
-      usersRequest <$> dyToken <*> dyOwner
-  beUserExists <- hold (isJust mbConfig) $ is200 <$> evUserResponse
+    let evRepoRequest =
+          gate beUserExists
+            . updated
+            $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
+    evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
+    dyRepoExists <- holdDyn (isJust mbConfig) $ is200 <$> evRepoResponse
 
-  let evRepoRequest =
-        gate beUserExists
-          . updated
-          $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
-  evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
-  dyRepoExists <- holdDyn (isJust mbConfig) $ is200 <$> evRepoResponse
+    evSave <- do
+      (ev, _) <-
+        elDynAttr'
+          "button"
+          (constDyn ("class" =: buttonClasses) <> (enableAttr <$> dyRepoExists))
+          $ text "Save"
+      pure $ domEvent Click ev
 
-  evGo <- do
-    (ev, _) <-
-      elDynAttr'
-        "button"
-        (constDyn ("class" =: buttonClasses) <> (enableAttr <$> dyRepoExists))
-        $ text "Go"
-    pure $ domEvent Click ev
-
-  let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
-  pure $ tag beConfig evGo
+    let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
+    pure $ tag beConfig evSave
+  where
+    mbOwner = mbConfig ^? _Just . owner . _Wrapped
+    mbRepo = mbConfig ^? _Just . repo . _Wrapped
+    mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
 
 mkToken :: Text -> Maybe Token
 mkToken "" = Nothing
