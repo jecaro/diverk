@@ -30,6 +30,7 @@ common defaults
     DeriveFunctor
     DeriveGeneric
     DeriveTraversable
+    DerivingStrategies
     DoAndIfThenElse
     EmptyDataDecls
     ExistentialQuantification
@@ -48,6 +49,7 @@ common defaults
     OverloadedStrings
     PartialTypeSignatures
     PatternGuards
+    PatternSynonyms
     PolyKinds
     RankNTypes
     RecordWildCards

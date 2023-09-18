@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Common.Model
