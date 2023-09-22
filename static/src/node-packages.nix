@@ -85,6 +85,15 @@ let
         sha512 = "oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==";
       };
     };
+    "@tailwindcss/forms-0.5.6" = {
+      name = "_at_tailwindcss_slash_forms";
+      packageName = "@tailwindcss/forms";
+      version = "0.5.6";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/@tailwindcss/forms/-/forms-0.5.6.tgz";
+        sha512 = "Fw+2BJ0tmAwK/w01tEFL5TiaJBX1NLT1/YbWgvm7ws3Qcn11kiXxzNTEQDMs5V3mQemhB56l3u0i9dwdzSQldA==";
+      };
+    };
     "@tailwindcss/typography-0.5.10" = {
       name = "_at_tailwindcss_slash_typography";
       packageName = "@tailwindcss/typography";
@@ -148,13 +157,13 @@ let
         sha512 = "PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==";
       };
     };
-    "autoprefixer-10.4.15" = {
+    "autoprefixer-10.4.16" = {
       name = "autoprefixer";
       packageName = "autoprefixer";
-      version = "10.4.15";
+      version = "10.4.16";
       src = fetchurl {
-        url = "https://registry.npmjs.org/autoprefixer/-/autoprefixer-10.4.15.tgz";
-        sha512 = "KCuPB8ZCIqFdA4HwKXsvz7j6gvSDNhDP7WnUjBleRkKjPdvCmHFuQ77ocavI8FT6NdvlBnE2UFr2H4Mycn8Vew==";
+        url = "https://registry.npmjs.org/autoprefixer/-/autoprefixer-10.4.16.tgz";
+        sha512 = "7vd3UC6xKp0HLfua5IjZlcXvGAGy7cBAXTg2lyQ/8WpNhd6SiZ8Be+xm3FyBSYJx5GKcpRCzBh7RH4/0dnY+uQ==";
       };
     };
     "balanced-match-1.0.2" = {
@@ -202,13 +211,13 @@ let
         sha512 = "b8um+L1RzM3WDSzvhm6gIz1yfTbBt6YTlcEKAvsmqCZZFw46z626lVj9j1yEPW33H5H+lBQpZMP1k8l+78Ha0A==";
       };
     };
-    "browserslist-4.21.10" = {
+    "browserslist-4.21.11" = {
       name = "browserslist";
       packageName = "browserslist";
-      version = "4.21.10";
+      version = "4.21.11";
       src = fetchurl {
-        url = "https://registry.npmjs.org/browserslist/-/browserslist-4.21.10.tgz";
-        sha512 = "bipEBdZfVH5/pwrvqc+Ub0kUPVfGUhlKxbvfD+z1BDnPEO/X98ruXGA1WP5ASpAFKan7Qr6j736IacbZQuAlKQ==";
+        url = "https://registry.npmjs.org/browserslist/-/browserslist-4.21.11.tgz";
+        sha512 = "xn1UXOKUz7DjdGlg9RrUr0GGiWzI97UQJnugHtH0OLDfJB7jMgoIkYvRIEO1l9EeEERVqeqLYOcFBW9ldjypbQ==";
       };
     };
     "camelcase-css-2.0.1" = {
@@ -472,13 +481,13 @@ let
         sha512 = "H78uMmQtI2AhgDJjWeQmHwJJ2bLPD3GMmO7Zja/ZZh84wkm+4ut+IUnUdRa8uCGX88DiVx1j6FRe1XfxEgjEZA==";
       };
     };
-    "electron-to-chromium-1.4.523" = {
+    "electron-to-chromium-1.4.527" = {
       name = "electron-to-chromium";
       packageName = "electron-to-chromium";
-      version = "1.4.523";
+      version = "1.4.527";
       src = fetchurl {
-        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.523.tgz";
-        sha512 = "9AreocSUWnzNtvLcbpng6N+GkXnCcBR80IQkxRC9Dfdyg4gaWNUPBujAHUpKkiUkoSoR9UlhA4zD/IgBklmhzg==";
+        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.527.tgz";
+        sha512 = "EafxEiEDzk2aLrdbtVczylHflHdHkNrpGNHIgDyA63sUQLQVS2ayj2hPw3RsVB42qkwURH+T2OxV7kGPUuYszA==";
       };
     };
     "emoji-regex-8.0.0" = {
@@ -848,6 +857,15 @@ let
       src = fetchurl {
         url = "https://registry.npmjs.org/micromatch/-/micromatch-4.0.5.tgz";
         sha512 = "DMy+ERcEW2q8Z2Po+WNXuw3c5YaUSFjAO5GsJqfEl7UjvtIuFKO6ZrKvcItdy98dwFI2N1tg3zNIdKaQT+aNdA==";
+      };
+    };
+    "mini-svg-data-uri-1.4.4" = {
+      name = "mini-svg-data-uri";
+      packageName = "mini-svg-data-uri";
+      version = "1.4.4";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/mini-svg-data-uri/-/mini-svg-data-uri-1.4.4.tgz";
+        sha512 = "r9deDe9p5FJUPZAk3A59wGH7Ii9YrjjWw0jmw/liSbHl2CHiyXj6FcDXDu2K3TjVAXqiJdaw3xxwlZZr9E6nHg==";
       };
     };
     "minimatch-3.1.2" = {
@@ -1552,13 +1570,13 @@ let
         sha512 = "hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==";
       };
     };
-    "update-browserslist-db-1.0.11" = {
+    "update-browserslist-db-1.0.13" = {
       name = "update-browserslist-db";
       packageName = "update-browserslist-db";
-      version = "1.0.11";
+      version = "1.0.13";
       src = fetchurl {
-        url = "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.0.11.tgz";
-        sha512 = "dCwEFf0/oT85M1fHBg4F0jtLwJrutGoHSQXCh7u4o2t1drG+c0a9Flnqww6XUKSfQMPpJBRjU8d4RXB09qtvaA==";
+        url = "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.0.13.tgz";
+        sha512 = "xebP81SNcPuNpPP3uzeW1NYXxI3rxyJzF3pD6sH4jE7o/IX+WtSpwnVU+qIsDPyk0d3hmFQ7mjqc6AtV604hbg==";
       };
     };
     "util-deprecate-1.0.2" = {
@@ -1640,6 +1658,7 @@ let
       sources."@nodelib/fs.scandir-2.1.5"
       sources."@nodelib/fs.stat-2.0.5"
       sources."@nodelib/fs.walk-1.2.8"
+      sources."@tailwindcss/forms-0.5.6"
       sources."@tailwindcss/typography-0.5.10"
       sources."@trysound/sax-0.2.0"
       sources."ansi-regex-5.0.1"
@@ -1647,13 +1666,13 @@ let
       sources."any-promise-1.3.0"
       sources."anymatch-3.1.3"
       sources."arg-5.0.2"
-      sources."autoprefixer-10.4.15"
+      sources."autoprefixer-10.4.16"
       sources."balanced-match-1.0.2"
       sources."binary-extensions-2.2.0"
       sources."boolbase-1.0.0"
       sources."brace-expansion-1.1.11"
       sources."braces-3.0.2"
-      sources."browserslist-4.21.10"
+      sources."browserslist-4.21.11"
       sources."camelcase-css-2.0.1"
       sources."caniuse-api-3.0.0"
       sources."caniuse-lite-1.0.30001538"
@@ -1686,7 +1705,7 @@ let
       sources."domelementtype-2.3.0"
       sources."domhandler-5.0.3"
       sources."domutils-3.1.0"
-      sources."electron-to-chromium-1.4.523"
+      sources."electron-to-chromium-1.4.527"
       sources."emoji-regex-8.0.0"
       sources."entities-4.5.0"
       sources."escalade-3.1.1"
@@ -1730,6 +1749,7 @@ let
       sources."mdn-data-2.0.30"
       sources."merge2-1.4.1"
       sources."micromatch-4.0.5"
+      sources."mini-svg-data-uri-1.4.4"
       sources."minimatch-3.1.2"
       sources."mz-2.7.0"
       sources."nanoid-3.3.6"
@@ -1823,7 +1843,7 @@ let
       sources."to-regex-range-5.0.1"
       sources."ts-interface-checker-0.1.13"
       sources."universalify-2.0.0"
-      sources."update-browserslist-db-1.0.11"
+      sources."update-browserslist-db-1.0.13"
       sources."util-deprecate-1.0.2"
       sources."wrap-ansi-7.0.0"
       sources."wrappy-1.0.2"
