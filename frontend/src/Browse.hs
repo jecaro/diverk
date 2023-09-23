@@ -185,4 +185,34 @@ contentWidget MkConfig {..} path = do
       StOther code ->
         elAttr "article" ("class" =: "prose") $
           el "pre" . el "code" . text $ code
-      _ -> blank
+      _ -> spinner
+
+spinner :: DomBuilder t m => m ()
+spinner =
+  elAttr
+    "div"
+    ( "class"
+        =: T.unwords
+          [ "absolute",
+            "right-1/2",
+            "bottom-1/2",
+            "transform",
+            "translate-x-1/2",
+            "translate-y-1/2"
+          ]
+    )
+    $ elAttr
+      "div"
+      ( "class"
+          =: T.unwords
+            [ "border-t-transparent",
+              "border-solid",
+              "animate-spin",
+              "rounded-full",
+              "border-blue-400",
+              "border-4",
+              "h-8",
+              "w-8"
+            ]
+      )
+      blank
