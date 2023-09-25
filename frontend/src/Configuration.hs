@@ -46,11 +46,20 @@ configuration mbConfig = do
             ]
       )
       $ do
-        dyOwner <- fmap MkOwner <$> inputWidget "text" "Owner" "name" owner'
+        dyOwner <-
+          fmap MkOwner
+            <$> inputWidget "text" "Owner *" "name" owner' Nothing
         dyRepo <-
-          fmap MkRepo <$> inputWidget "text" "Repository" "repository" repo'
+          fmap MkRepo
+            <$> inputWidget "text" "Repository *" "repository" repo' Nothing
         dyToken <-
-          fmap mkToken <$> inputWidget "password" "Token" "github_xxx" token'
+          fmap mkToken
+            <$> inputWidget
+              "password"
+              "Token"
+              "github_xxx"
+              token'
+              (Just "Needed to access private repositories")
 
         evUserResponse <-
           onClient . performRequestAsyncWithError . updated $
@@ -94,21 +103,34 @@ is200 :: Either XhrException XhrResponse -> Bool
 is200 (Left _) = False
 is200 (Right response) = response ^. xhrResponse_status == 200
 
-inputWidget :: (DomBuilder t m) => Text -> Text -> Text -> Text -> m (Dynamic t Text)
-inputWidget type_ label placeholder initialValue =
+inputWidget ::
+  (DomBuilder t m) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  m (Dynamic t Text)
+inputWidget type_ label placeholder initialValue mbHelp =
   el "div" $ do
-    elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $
+    elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $ do
       text label
-    value
-      <$> inputElement
-        ( def
-            & inputElementConfig_initialValue .~ initialValue
-            & initialAttributes
-              .~ ( "class" =: inputClasses
-                     <> "placeholder" =: placeholder
-                     <> "type" =: type_
-                 )
-        )
+    dyInput <-
+      value
+        <$> inputElement
+          ( def
+              & inputElementConfig_initialValue .~ initialValue
+              & initialAttributes
+                .~ ( "class" =: inputClasses
+                       <> "placeholder" =: placeholder
+                       <> "type" =: type_
+                   )
+          )
+    case mbHelp of
+      Nothing -> pure ()
+      Just help ->
+        elAttr "p" ("class" =: "mt-2 text-sm text-gray-500") $ text help
+    pure dyInput
 
 inputClasses :: Text
 inputClasses =
