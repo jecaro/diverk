@@ -9,7 +9,7 @@ import Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Bifunctor (Bifunctor (first))
-import Data.Either.Extra (fromEither, maybeToEither)
+import Data.Either.Extra (maybeToEither)
 import Data.List (inits)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -22,7 +22,7 @@ import qualified Data.Text.Lazy as LT
 import JSDOM.Element (setInnerHTML)
 import JSDOM.Types (liftJSM)
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink)
+import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink, routeLinkAttr)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import Request (contentsRequest)
@@ -47,33 +47,30 @@ data State
   | StDirectory [PathToFile]
   | StMarkdown (CM.Html ())
   | StOther Text
-  | StError Error
   deriving stock (Show)
 
 data LocalEvent
   = LoStartRequest
   | LoEndRequest (Either XhrException XhrResponse)
 
-updateState :: LocalEvent -> State -> State
-updateState LoStartRequest StInitial = StFetching
-updateState (LoEndRequest (Left _)) StFetching = StError ErRequest
-updateState (LoEndRequest (Right response)) StFetching = responseToState response
-updateState _ _ = StError ErInvalid
+updateState :: LocalEvent -> Either Error State -> Either Error State
+updateState LoStartRequest (Right StInitial) = Right StFetching
+updateState (LoEndRequest (Left _)) (Right StFetching) = Left ErRequest
+updateState (LoEndRequest (Right response)) (Right StFetching) =
+  responseToState response
+updateState _ _ = Left ErInvalid
 
-responseToState :: XhrResponse -> State
+responseToState :: XhrResponse -> Either Error State
 responseToState response =
   case response ^. xhrResponse_status of
-    200 -> fromEither $ first StError eiObjects
-    code -> StError $ ErStatus code
-  where
-    eiObjects :: Either Error State
-    eiObjects = do
+    200 -> do
       v <- maybeToEither ErJSON $ decodeXhrResponse response
       case v of
         JSON.Array _ -> toDirectory v
         JSON.Object _ -> toMarkdownOrCode v
         _ -> Left ErJSON
-
+    code -> Left $ ErStatus code
+  where
     toMarkdownOrCode :: JSON.Value -> Either Error State
     toMarkdownOrCode v = do
       path <- maybeToEither ErJSON $ parsePath v
@@ -105,6 +102,14 @@ responseToState response =
     parsePath = preview $ key "path" . _String . to splitPath
     splitPath = T.split (== '/')
 
+errorToText :: Error -> Text
+errorToText (ErStatus code) = "Unexpected status code: " <> T.pack (show code)
+errorToText ErJSON = "Invalid JSON"
+errorToText (ErBase64 err) = "Base64 error: " <> T.pack (show err)
+errorToText (ErMarkdown err) = "Markdown error: " <> T.pack (show err)
+errorToText ErRequest = "Request error"
+errorToText ErInvalid = "Invalid state"
+
 browse ::
   ( DomBuilder t m,
     PostBuild t m,
@@ -117,9 +122,83 @@ browse ::
   Config ->
   [Text] ->
   m ()
-browse config path = do
+browse MkConfig {..} path = do
+  evRequest <-
+    (contentsRequest coToken coOwner coRepo path <$) <$> getPostBuild
+  evResponse <- onClient $ performRequestAsyncWithError evRequest
+
+  dynState <-
+    foldDyn updateState (Right StInitial) $
+      leftmost
+        [LoStartRequest <$ evRequest, LoEndRequest <$> evResponse]
+
   navbar path
-  contentWidget config path
+  dyn_ . ffor dynState $ \case
+    Left err -> errorWidget path err
+    Right state ->
+      elAttr "div" ("class" =: "flex flex-col gap-4 p-4 overflow-auto") $
+        contentWidget state
+
+errorWidget ::
+  ( RouteToUrl (R FrontendRoute) m,
+    SetRoute t (R FrontendRoute) m,
+    DomBuilder t m,
+    Prerender t m
+  ) =>
+  [Text] ->
+  Error ->
+  m ()
+errorWidget path err =
+  elAttr "div" ("class" =: "flex flex-col p-4") $
+    elAttr
+      "div"
+      ( "class"
+          =: T.unwords
+            [ "p-4",
+              "mx-auto",
+              "text-red-800",
+              "border",
+              "border-red-300",
+              "rounded-lg",
+              "bg-red-50"
+            ]
+      )
+      $ do
+        elAttr "div" ("class" =: "flex items-center") $ do
+          elAttr "i" ("class" =: "fa-solid fa-circle-info mr-2") blank
+          elAttr "h3" ("class" =: "text-lg font-medium") $
+            text "An error occurred"
+        elAttr "div" ("class" =: "text-sm") $ do
+          text $ errorToText err
+          el "br" blank
+          text "You can "
+          routeLinkAttr
+            ("class" =: "text-blue-600 hover:underline")
+            (MkBrowse :/ path)
+            (text "try again")
+
+contentWidget ::
+  ( SetRoute t (R FrontendRoute) m,
+    RouteToUrl (R FrontendRoute) m,
+    DomBuilder t m,
+    Prerender t m
+  ) =>
+  State ->
+  m ()
+contentWidget (StDirectory pathsToFiles) =
+  forM_ pathsToFiles $ \(MkPathToFile pathToFile) ->
+    el "div" $
+      routeLink (MkBrowse :/ pathToFile)
+        . text
+        . fromMaybe "/"
+        $ pathToFile ^? _last
+contentWidget (StMarkdown html) =
+  prerender_ blank $ do
+    (e, _) <- elAttr' "article" ("class" =: "prose") blank
+    liftJSM $ setInnerHTML (_element_raw e) (LT.toStrict $ CM.renderHtml html)
+contentWidget (StOther code) =
+  elAttr "article" ("class" =: "prose") . el "pre" . el "code" . text $ code
+contentWidget _ = spinner
 
 navbar ::
   ( RouteToUrl (R FrontendRoute) m,
@@ -144,48 +223,6 @@ navbar path = do
     homeOrText [] = house
     homeOrText [x] = text x
     homeOrText (_ : xs) = homeOrText xs
-
-contentWidget ::
-  ( RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m,
-    DomBuilder t m,
-    PostBuild t m,
-    MonadHold t m,
-    MonadFix m,
-    Prerender t m
-  ) =>
-  Config ->
-  [Text] ->
-  m ()
-contentWidget MkConfig {..} path = do
-  evRequest <-
-    (contentsRequest coToken coOwner coRepo path <$) <$> getPostBuild
-  evResponse <- onClient $ performRequestAsyncWithError evRequest
-
-  dynState <-
-    foldDyn updateState StInitial $
-      leftmost
-        [LoStartRequest <$ evRequest, LoEndRequest <$> evResponse]
-
-  elAttr "div" ("class" =: "flex flex-col gap-4 p-4 overflow-auto") $
-    dyn_ . ffor dynState $ \case
-      StError err -> el "div" . text . T.pack $ show err
-      StDirectory pathsToFiles ->
-        forM_ pathsToFiles $ \(MkPathToFile pathToFile) ->
-          el "div" $
-            routeLink (MkBrowse :/ pathToFile)
-              . text
-              . fromMaybe "/"
-              $ pathToFile ^? _last
-      StMarkdown html ->
-        prerender_ blank $ do
-          (e, _) <- elAttr' "article" ("class" =: "prose") blank
-          liftJSM $
-            setInnerHTML (_element_raw e) (LT.toStrict $ CM.renderHtml html)
-      StOther code ->
-        elAttr "article" ("class" =: "prose") $
-          el "pre" . el "code" . text $ code
-      _ -> spinner
 
 spinner :: DomBuilder t m => m ()
 spinner =
