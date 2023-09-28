@@ -1,3 +1,5 @@
+{-# LANGUAGE RecursiveDo #-}
+
 module Configuration (configuration) where
 
 import Common.Model
@@ -10,24 +12,26 @@ import Common.Model
     token,
   )
 import Control.Lens ((^.), (^?), _Just, _Wrapped)
-import Data.Map (Map)
-import Data.Maybe (fromMaybe, isJust)
+import Control.Monad.Fix (MonadFix)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
-import Request (contentsRequest, usersRequest)
+import Request (contentsRequest, rateLimitRequest, usersRequest)
+import Witherable (catMaybes)
 import Prelude hiding (unzip)
 
 configuration ::
   ( DomBuilder t m,
     Prerender t m,
     MonadHold t m,
-    PostBuild t m
+    PostBuild t m,
+    MonadFix m
   ) =>
   Maybe Config ->
   m (Event t Config)
-configuration mbConfig = do
+configuration mbConfig =
   elAttr "div" ("class" =: "flex items-start md:h-screen md:pt-[20vh]") $
     elAttr
       "div"
@@ -46,62 +50,99 @@ configuration mbConfig = do
             ]
       )
       $ do
-        dyOwner <-
-          fmap MkOwner
-            <$> inputWidget "text" "Owner *" "name" owner' Nothing
-        dyRepo <-
-          fmap MkRepo
-            <$> inputWidget "text" "Repository *" "repository" repo' Nothing
-        dyToken <-
-          fmap mkToken
-            <$> inputWidget
-              "password"
-              "Token"
-              "github_xxx"
-              token'
-              (Just "Needed to access private repositories")
+        rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerExists
+            dyRepo <- fmap MkRepo <$> inputRepo evRepoExists
+            dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
 
-        evUserResponse <-
-          onClient . performRequestAsyncWithError . updated $
-            usersRequest <$> dyToken <*> dyOwner
-        beUserExists <- hold (isJust mbConfig) $ is200 <$> evUserResponse
-
-        let evRepoRequest =
-              gate beUserExists
+            -- the owner request, gated by the token being valid
+            evOwnerResponse <-
+              onClient . performRequestAsyncWithError
+                . gate (current dyTokenValid)
                 . updated
-                $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
-        evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
-        dyRepoExists <- holdDyn (isJust mbConfig) $ is200 <$> evRepoResponse
+                $ usersRequest <$> dyToken <*> dyOwner
+            -- 401 means the token is wrong. In this case we assume the owner
+            -- exists. Because the token is wrong, the form cannot be submitted
+            -- anyway.
+            let evOwnerExists = is200Or401 <$> evOwnerResponse
 
-        evSave <- do
-          (ev, _) <-
-            elDynAttr'
-              "button"
-              ( constDyn ("class" =: buttonClasses)
-                  <> (enableAttr <$> dyRepoExists)
-              )
-              $ text "Save"
-          pure $ domEvent Click ev
+            -- the repo request, gated by the owner existing
+            beOwnerExists <- hold (isJust mbConfig) evOwnerExists
+            let evRepoRequest =
+                  gate beOwnerExists
+                    . updated
+                    $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
+            evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
+            -- same remark for 401
+            let evRepoExists = is200Or401 <$> evRepoResponse
+                dyTokenRequest = fmap rateLimitRequest <$> dyToken
+                evMaybeTokenRequest = updated dyTokenRequest
+                evTokenRequest = catMaybes evMaybeTokenRequest
+            dyRepoExists <- holdDyn (isJust mbRepo) $ is200 <$> evRepoResponse
+
+            -- the token request valid if empty or if it returns 200 on the
+            -- rate limit endpoint
+            evTokenResponse <- onClient $ performRequestAsyncWithError evTokenRequest
+            let evTokenValidFromResponse = is200 <$> evTokenResponse
+                evTokenEmpty = isNothing <$> evMaybeTokenRequest
+                evFinal = leftmost [evTokenValidFromResponse, evTokenEmpty]
+            dyTokenValid <- holdDyn True evFinal
+
+        let dyCanSave = (&&) <$> dyRepoExists <*> dyTokenValid
+        evSave <- saveButton dyCanSave
 
         let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
         pure $ tag beConfig evSave
   where
-    owner' = withDefault $ mbConfig ^? _Just . owner . _Wrapped
-    repo' = withDefault $ mbConfig ^? _Just . repo . _Wrapped
-    token' = withDefault $ mbConfig ^? _Just . token . _Just . _Wrapped
-    withDefault = fromMaybe ""
+    inputOwner evOwnerExists =
+      inputWidget
+        "text"
+        "Owner *"
+        "name"
+        (fromMaybe "" mbOwner)
+        (isJust mbOwner)
+        evOwnerExists
+        Nothing
+    inputRepo evRepoExists =
+      inputWidget
+        "text"
+        "Repository *"
+        "repository"
+        (fromMaybe "" mbRepo)
+        (isJust mbRepo)
+        evRepoExists
+        Nothing
+    inputToken evTokenValid =
+      inputWidget
+        "password"
+        "Token"
+        "github_xxx"
+        (fromMaybe "" mbToken)
+        True
+        evTokenValid
+        (Just "Needed to access private repositories")
+    saveButton dyCanSave = do
+      (ev, _) <-
+        elDynAttr'
+          "button"
+          (constDyn ("class" =: buttonClasses) <> (enableAttr <$> dyCanSave))
+          $ text "Save"
+      pure $ domEvent Click ev
 
-mkToken :: Text -> Maybe Token
-mkToken "" = Nothing
-mkToken txToken = Just $ MkToken txToken
+    mbOwner = mbConfig ^? _Just . owner . _Wrapped
+    mbRepo = mbConfig ^? _Just . repo . _Wrapped
+    mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
 
-enableAttr :: Bool -> Map Text Text
-enableAttr True = mempty
-enableAttr False = "disabled" =: "true"
+    is200 = checkStatus (== 200)
+    is200Or401 = checkStatus (\status -> status == 200 || status == 401)
 
-is200 :: Either XhrException XhrResponse -> Bool
-is200 (Left _) = False
-is200 (Right response) = response ^. xhrResponse_status == 200
+    checkStatus _ (Left _) = False
+    checkStatus p (Right response) = p $ response ^. xhrResponse_status
+
+    mkToken "" = Nothing
+    mkToken txToken = Just $ MkToken txToken
+
+    enableAttr True = mempty
+    enableAttr False = "disabled" =: "true"
 
 inputWidget ::
   (DomBuilder t m) =>
@@ -109,9 +150,11 @@ inputWidget ::
   Text ->
   Text ->
   Text ->
+  Bool ->
+  Event t Bool ->
   Maybe Text ->
   m (Dynamic t Text)
-inputWidget type_ label placeholder initialValue mbHelp =
+inputWidget type_ label placeholder initialValue valid evValid mbHelp =
   el "div" $ do
     elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $ do
       text label
@@ -121,10 +164,12 @@ inputWidget type_ label placeholder initialValue mbHelp =
           ( def
               & inputElementConfig_initialValue .~ initialValue
               & initialAttributes
-                .~ ( "class" =: inputClasses
+                .~ ( "class" =: inputClasses valid
                        <> "placeholder" =: placeholder
                        <> "type" =: type_
                    )
+              & modifyAttributes
+                .~ ((=:) "class" . Just . inputClasses <$> evValid)
           )
     case mbHelp of
       Nothing -> pure ()
@@ -132,20 +177,29 @@ inputWidget type_ label placeholder initialValue mbHelp =
         elAttr "p" ("class" =: "mt-2 text-sm text-gray-500") $ text help
     pure dyInput
 
-inputClasses :: Text
-inputClasses =
-  T.unwords
+inputClasses :: Bool -> Text
+inputClasses valid =
+  T.unwords $
     [ "bg-gray-50",
       "border",
-      "border-gray-300",
-      "text-gray-900",
       "rounded-lg",
-      "focus:ring-blue-600",
-      "focus:border-blue-600",
       "block",
       "w-full",
       "p-2.5"
     ]
+      <> if valid
+        then
+          [ "border-gray-300",
+            "text-gray-900",
+            "focus:ring-blue-600",
+            "focus:border-blue-600"
+          ]
+        else
+          [ "border-red-300",
+            "text-red-900",
+            "focus:ring-red-600",
+            "focus:border-red-600"
+          ]
 
 buttonClasses :: Text
 buttonClasses =

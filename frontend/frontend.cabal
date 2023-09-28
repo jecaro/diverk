@@ -81,6 +81,7 @@ library
     obelisk-route,
     reflex-dom-core,
     text,
+    witherable,
   exposed-modules:
     Frontend
   other-modules:

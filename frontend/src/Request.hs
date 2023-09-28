@@ -1,4 +1,4 @@
-module Request (contentsRequest, usersRequest) where
+module Request (contentsRequest, rateLimitRequest, usersRequest) where
 
 import Common.Model (Owner, Repo, Token)
 import Control.Lens ((<>~), (^.), _Wrapped)
@@ -9,17 +9,15 @@ import Reflex.Dom.Core
 
 usersRequest :: Maybe Token -> Owner -> XhrRequest ()
 usersRequest mbToken owner =
-  xhrRequest
-    "GET"
-    (usersURL owner)
-    (requestConfig mbToken)
+  xhrRequest "GET" (usersURL owner) (requestConfig mbToken)
 
 contentsRequest :: Maybe Token -> Owner -> Repo -> [Text] -> XhrRequest ()
 contentsRequest mbToken owner repo path =
-  xhrRequest
-    "GET"
-    (contentsURL owner repo path)
-    (requestConfig mbToken)
+  xhrRequest "GET" (contentsURL owner repo path) (requestConfig mbToken)
+
+rateLimitRequest :: Token -> XhrRequest ()
+rateLimitRequest token =
+  xhrRequest "GET" rateLimitURL (requestConfig $ Just token)
 
 requestConfig :: Maybe Token -> XhrRequestConfig ()
 requestConfig mbToken = def & xhrRequestConfig_headers <>~ tokenHeader mbToken
@@ -47,6 +45,9 @@ usersURL owner =
       "users",
       owner ^. _Wrapped
     ]
+
+rateLimitURL :: Text
+rateLimitURL = githubBaseURL <> "/rate_limit"
 
 githubBaseURL :: Text
 githubBaseURL = "https://api.github.com"
