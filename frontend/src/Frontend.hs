@@ -8,6 +8,7 @@ import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
 import Configuration (configuration)
 import Control.Monad.Fix (MonadFix)
+import Control.Monad.IO.Class (MonadIO)
 import LocalStorage (load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
@@ -63,7 +64,10 @@ frontendBody ::
     MonadHold t m,
     PostBuild t m,
     SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m
+    RouteToUrl (R FrontendRoute) m,
+    PerformEvent t m,
+    TriggerEvent t m,
+    MonadIO (Performable m)
   ) =>
   m ()
 frontendBody = do
@@ -84,7 +88,10 @@ route ::
     PostBuild t m,
     MonadHold t m,
     MonadFix m,
-    RouteToUrl (R FrontendRoute) m
+    RouteToUrl (R FrontendRoute) m,
+    PerformEvent t m,
+    TriggerEvent t m,
+    MonadIO (Performable m)
   ) =>
   R FrontendRoute ->
   State ->

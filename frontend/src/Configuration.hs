@@ -11,8 +11,10 @@ import Common.Model
     repo,
     token,
   )
-import Control.Lens ((^.), (^?), _Just, _Wrapped)
+import Control.Lens (to, (^.), (^?), _Just, _Wrapped)
+import Control.Monad ((<=<))
 import Control.Monad.Fix (MonadFix)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -27,7 +29,10 @@ configuration ::
     Prerender t m,
     MonadHold t m,
     PostBuild t m,
-    MonadFix m
+    MonadFix m,
+    PerformEvent t m,
+    TriggerEvent t m,
+    MonadIO (Performable m)
   ) =>
   Maybe Config ->
   m (Event t Config)
@@ -50,42 +55,56 @@ configuration mbConfig =
             ]
       )
       $ do
-        rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerExists
-            dyRepo <- fmap MkRepo <$> inputRepo evRepoExists
+        rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
+            dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
             dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
 
-            -- the owner request, gated by the token being valid
-            evOwnerResponse <-
-              onClient . performRequestAsyncWithError
-                . gate (current dyTokenValid)
-                . updated
-                $ usersRequest <$> dyToken <*> dyOwner
+            -- The owner request
+            let evUserRequest = updated $ usersRequest <$> dyToken <*> dyOwner
+            evOwnerResponse <- debounceAndRequest evUserRequest
             -- 401 means the token is wrong. In this case we assume the owner
             -- exists. Because the token is wrong, the form cannot be submitted
             -- anyway.
-            let evOwnerExists = is200Or401 <$> evOwnerResponse
+            let evOwnerValid =
+                  leftmost
+                    [ -- The owner is valid
+                      is200Or401 <$> evOwnerResponse,
+                      -- It is currently edited
+                      False <$ evUserRequest
+                    ]
 
-            -- the repo request, gated by the owner existing
-            beOwnerExists <- hold (isJust mbConfig) evOwnerExists
-            let evRepoRequest =
-                  gate beOwnerExists
-                    . updated
-                    $ contentsRequest <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
-            evRepoResponse <- onClient $ performRequestAsyncWithError evRepoRequest
-            -- same remark for 401
-            let evRepoExists = is200Or401 <$> evRepoResponse
-                dyTokenRequest = fmap rateLimitRequest <$> dyToken
-                evMaybeTokenRequest = updated dyTokenRequest
-                evTokenRequest = catMaybes evMaybeTokenRequest
-            dyRepoExists <- holdDyn (isJust mbRepo) $ is200 <$> evRepoResponse
+            -- The repo request
+            let evContentRequest =
+                  updated $
+                    contentsRequest
+                      <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
+            evRepoResponse <- debounceAndRequest evContentRequest
+            -- Same remark for 401
+            dyRepoExists <-
+              holdDyn (isJust mbRepo) $
+                leftmost
+                  [ is200Or401 <$> evRepoResponse,
+                    False <$ evContentRequest
+                  ]
 
-            -- the token request valid if empty or if it returns 200 on the
-            -- rate limit endpoint
-            evTokenResponse <- onClient $ performRequestAsyncWithError evTokenRequest
-            let evTokenValidFromResponse = is200 <$> evTokenResponse
-                evTokenEmpty = isNothing <$> evMaybeTokenRequest
-                evFinal = leftmost [evTokenValidFromResponse, evTokenEmpty]
-            dyTokenValid <- holdDyn True evFinal
+            -- The token request
+            -- The token is valid:
+            -- - if empty
+            -- - if the rate limit endpoint returns 200
+            let evMaybeTokenRequest = updated $ fmap rateLimitRequest <$> dyToken
+            evTokenResponse <- debounceAndRequest $ catMaybes evMaybeTokenRequest
+            let evTokenValidOrEmpty =
+                  leftmost
+                    [ -- Valid non empty token
+                      is200 <$> evTokenResponse,
+                      -- Empty token
+                      isNothing <$> evMaybeTokenRequest,
+                      -- Token currently edited
+                      False <$ evMaybeTokenRequest
+                    ]
+            -- In the initial state, the token is either empty either loaded
+            -- from the local storage. In both cases, we assume it is valid.
+            dyTokenValid <- holdDyn True evTokenValidOrEmpty
 
         let dyCanSave = (&&) <$> dyRepoExists <*> dyTokenValid
         evSave <- saveButton dyCanSave
@@ -93,38 +112,38 @@ configuration mbConfig =
         let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
         pure $ tag beConfig evSave
   where
-    inputOwner evOwnerExists =
+    inputOwner evValid =
       inputWidget
         "text"
         "Owner *"
         "name"
         (fromMaybe "" mbOwner)
         (isJust mbOwner)
-        evOwnerExists
+        evValid
         Nothing
-    inputRepo evRepoExists =
+    inputRepo evValid =
       inputWidget
         "text"
         "Repository *"
         "repository"
         (fromMaybe "" mbRepo)
         (isJust mbRepo)
-        evRepoExists
+        evValid
         Nothing
-    inputToken evTokenValid =
+    inputToken evValid =
       inputWidget
         "password"
         "Token"
         "github_xxx"
         (fromMaybe "" mbToken)
         True
-        evTokenValid
+        evValid
         (Just "Needed to access private repositories")
-    saveButton dyCanSave = do
+    saveButton dyEnable = do
       (ev, _) <-
         elDynAttr'
           "button"
-          (constDyn ("class" =: buttonClasses) <> (enableAttr <$> dyCanSave))
+          (constDyn ("class" =: buttonClasses) <> (enableAttr <$> dyEnable))
           $ text "Save"
       pure $ domEvent Click ev
 
@@ -132,14 +151,16 @@ configuration mbConfig =
     mbRepo = mbConfig ^? _Just . repo . _Wrapped
     mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
 
-    is200 = checkStatus (== 200)
-    is200Or401 = checkStatus (\status -> status == 200 || status == 401)
-
-    checkStatus _ (Left _) = False
-    checkStatus p (Right response) = p $ response ^. xhrResponse_status
-
     mkToken "" = Nothing
     mkToken txToken = Just $ MkToken txToken
+
+    debounceAndRequest = onClient . performRequestAsyncWithError <=< debounce 0.5
+
+    is200 = checkStatus (== 200)
+    is200Or401 = checkStatus (`elem` [200, 401])
+
+    checkStatus _ (Left _) = False
+    checkStatus p (Right response) = response ^. xhrResponse_status . to p
 
     enableAttr True = mempty
     enableAttr False = "disabled" =: "true"
