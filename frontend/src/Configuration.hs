@@ -114,7 +114,7 @@ configuration mbConfig =
   where
     inputOwner evValid =
       inputWidget
-        "text"
+        MkText
         "Owner *"
         "name"
         (fromMaybe "" mbOwner)
@@ -123,7 +123,7 @@ configuration mbConfig =
         Nothing
     inputRepo evValid =
       inputWidget
-        "text"
+        MkText
         "Repository *"
         "repository"
         (fromMaybe "" mbRepo)
@@ -132,7 +132,7 @@ configuration mbConfig =
         Nothing
     inputToken evValid =
       inputWidget
-        "password"
+        MkPassword
         "Token"
         "github_xxx"
         (fromMaybe "" mbToken)
@@ -165,9 +165,15 @@ configuration mbConfig =
     enableAttr True = mempty
     enableAttr False = "disabled" =: "true"
 
+data InputType = MkPassword | MkText
+
+toText :: InputType -> Text
+toText MkPassword = "password"
+toText MkText = "text"
+
 inputWidget ::
-  (DomBuilder t m) =>
-  Text ->
+  (DomBuilder t m, MonadHold t m, MonadFix m, PostBuild t m) =>
+  InputType ->
   Text ->
   Text ->
   Text ->
@@ -175,31 +181,63 @@ inputWidget ::
   Event t Bool ->
   Maybe Text ->
   m (Dynamic t Text)
-inputWidget type_ label placeholder initialValue valid evValid mbHelp =
+inputWidget inputType label placeholder initialValue valid evValid mbHelp =
   el "div" $ do
-    elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $ do
+    elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $
       text label
-    dyInput <-
-      value
-        <$> inputElement
-          ( def
-              & inputElementConfig_initialValue .~ initialValue
-              & initialAttributes
-                .~ ( "class" =: inputClasses valid
-                       <> "placeholder" =: placeholder
-                       <> "type" =: type_
-                   )
-              & modifyAttributes
-                .~ ((=:) "class" . Just . inputClasses <$> evValid)
-          )
-    case mbHelp of
-      Nothing -> pure ()
-      Just help ->
-        elAttr "p" ("class" =: "mt-2 text-sm text-gray-500") $ text help
-    pure dyInput
 
-inputClasses :: Bool -> Text
-inputClasses valid =
+    dyInput <- elAttr "div" ("class" =: "relative") $ do
+      rec dyInput <-
+            value
+              <$> inputElement
+                ( def
+                    & inputElementConfig_initialValue .~ initialValue
+                    & initialAttributes
+                      .~ ( "class" =: inputClasses' valid
+                             <> "placeholder" =: placeholder
+                             <> "type" =: toText inputType
+                         )
+                    & modifyAttributes
+                      .~ ( ((=:) "class" . Just . inputClasses' <$> evValid)
+                             <> (toggleInputType inputType <$> evPasswordVisible)
+                         )
+                )
+          evPasswordVisible <- elEye inputType
+      pure dyInput
+
+    elHelp mbHelp
+
+    pure dyInput
+  where
+    inputClasses' = inputClasses inputType
+
+    toggleInputType MkText _ = mempty
+    toggleInputType MkPassword True = "type" =: Just "text"
+    toggleInputType MkPassword False = "type" =: Just "password"
+
+    elEye MkText = pure never
+    elEye MkPassword = do
+      rec ev <- elAttr
+            "div"
+            ("class" =: "absolute inset-y-0 right-0 pr-3 flex items-center")
+            $ do
+              (e, _) <- elDynAttr' "i" (eyeClasses <$> dyPasswordVisible) blank
+              pure $ domEvent Click e
+          dyPasswordVisible <- toggle False ev
+      pure $ updated dyPasswordVisible
+
+    eyeClasses = ("class" =:) . T.unwords . ("fa-solid" :) . pure . eyeIcon
+
+    eyeIcon True = "fa-eye-slash"
+    eyeIcon False = "fa-eye"
+
+    elHelp Nothing = pure ()
+    elHelp (Just help) =
+      elAttr "p" ("class" =: "mt-2 text-sm text-gray-500") $
+        text help
+
+inputClasses :: InputType -> Bool -> Text
+inputClasses inputType valid =
   T.unwords $
     [ "bg-gray-50",
       "border",
@@ -208,19 +246,24 @@ inputClasses valid =
       "w-full",
       "p-2.5"
     ]
-      <> if valid
-        then
-          [ "border-gray-300",
-            "text-gray-900",
-            "focus:ring-blue-600",
-            "focus:border-blue-600"
-          ]
-        else
-          [ "border-red-300",
-            "text-red-900",
-            "focus:ring-red-600",
-            "focus:border-red-600"
-          ]
+      <> validClasses valid
+      <> inputTypeClasses inputType
+  where
+    validClasses True =
+      [ "border-gray-300",
+        "text-gray-900",
+        "focus:ring-blue-600",
+        "focus:border-blue-600"
+      ]
+    validClasses False =
+      [ "border-red-300",
+        "text-red-900",
+        "focus:ring-red-600",
+        "focus:border-red-600"
+      ]
+    -- Make room for the eye icon
+    inputTypeClasses MkPassword = ["pr-10"]
+    inputTypeClasses MkText = mempty
 
 buttonClasses :: Text
 buttonClasses =
