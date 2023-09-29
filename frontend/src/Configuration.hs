@@ -70,37 +70,43 @@ configuration mbConfig =
                     [ -- The owner is valid
                       is200Or401 <$> evOwnerResponse,
                       -- It is currently edited
-                      False <$ evUserRequest
+                      False <$ updated dyOwner
                     ]
 
             -- The repo request
             let evContentRequest =
                   updated $
                     contentsRequest
-                      <$> dyToken <*> dyOwner <*> dyRepo <*> pure []
+                      <$> dyToken <*> dyOwner <*> dyRepo <*> pure mempty
             evRepoResponse <- debounceAndRequest evContentRequest
             -- Same remark for 401
             dyRepoExists <-
               holdDyn (isJust mbRepo) $
                 leftmost
                   [ is200Or401 <$> evRepoResponse,
-                    False <$ evContentRequest
+                    False <$ updated dyOwner,
+                    False <$ updated dyRepo
                   ]
 
             -- The token request
             -- The token is valid:
             -- - if empty
             -- - if the rate limit endpoint returns 200
-            let evMaybeTokenRequest = updated $ fmap rateLimitRequest <$> dyToken
-            evTokenResponse <- debounceAndRequest $ catMaybes evMaybeTokenRequest
+            let evToken = updated dyToken
+                evMaybeTokenRequest = fmap rateLimitRequest <$> evToken
+            evTokenResponse <-
+              -- dont debounce the request if the token is empty
+              fmap (gate (isJust <$> current dyToken))
+                . debounceAndRequest
+                $ catMaybes evMaybeTokenRequest
             let evTokenValidOrEmpty =
                   leftmost
                     [ -- Valid non empty token
                       is200 <$> evTokenResponse,
                       -- Empty token
-                      isNothing <$> evMaybeTokenRequest,
+                      isNothing <$> evToken,
                       -- Token currently edited
-                      False <$ evMaybeTokenRequest
+                      False <$ evToken
                     ]
             -- In the initial state, the token is either empty either loaded
             -- from the local storage. In both cases, we assume it is valid.
