@@ -138,7 +138,7 @@ browse MkConfig {..} path = do
   dyn_ . ffor dynState $ \case
     Left err -> errorWidget path err
     Right state ->
-      elAttr "div" ("class" =: "flex flex-col gap-4 p-4 overflow-auto") $
+      elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $
         contentWidget state
 
 errorWidget ::
@@ -151,26 +151,25 @@ errorWidget ::
   Error ->
   m ()
 errorWidget path err =
-  elAttr "div" ("class" =: "flex flex-col p-4") $
-    elAttr
+  elClass "div" "flex flex-col p-4" $
+    elClass
       "div"
-      ( "class"
-          =: T.unwords
-            [ "p-4",
-              "mx-auto",
-              "text-red-800",
-              "border",
-              "border-red-300",
-              "rounded-lg",
-              "bg-red-50"
-            ]
+      ( T.unwords
+          [ "p-4",
+            "mx-auto",
+            "text-red-800",
+            "border",
+            "border-red-300",
+            "rounded-lg",
+            "bg-red-50"
+          ]
       )
       $ do
-        elAttr "div" ("class" =: "flex items-center") $ do
-          elAttr "i" ("class" =: "fa-solid fa-circle-info mr-2") blank
-          elAttr "h3" ("class" =: "text-lg font-medium") $
+        elClass "div" "flex items-center" $ do
+          elClass "i" "fa-solid fa-circle-info mr-2" blank
+          elClass "h3" "text-lg font-medium" $
             text "An error occurred"
-        elAttr "div" ("class" =: "text-sm") $ do
+        elClass "div" "text-sm" $ do
           text $ errorToText err
           el "br" blank
           text "You can "
@@ -196,13 +195,13 @@ contentWidget (StDirectory pathsToFiles) =
         $ pathToFile ^? _last
 contentWidget (StMarkdown html) =
   prerender_ blank $ do
-    (e, _) <- elAttr' "article" ("class" =: "prose") blank
+    (e, _) <- elClass' "article" "prose" blank
     liftJSM $
       setInnerHTML
         (JSDOM.Element . GHCJSDOM.unElement $ _element_raw e)
         (LT.toStrict $ CM.renderHtml html)
 contentWidget (StOther code) =
-  elAttr "article" ("class" =: "prose") . el "pre" . el "code" . text $ code
+  elClass "article" "prose" . el "pre" . el "code" . text $ code
 contentWidget _ = spinner
 
 navbar ::
@@ -214,47 +213,45 @@ navbar ::
   [Text] ->
   m ()
 navbar path = do
-  elAttr "nav" ("class" =: "sticky shadow-md top-0 flex flex-col p-4 bg-white") $
-    elAttr "ol" ("class" =: "flex gap-x-4  w-full") $ do
+  elClass "nav" "sticky shadow-md top-0 flex flex-col p-4 bg-white" $
+    elClass "ol" "flex gap-x-4  w-full" $ do
       forM_ (inits path) $ \intermediatePath ->
         el "li" $
           routeLink (MkBrowse :/ intermediatePath) $ homeOrText intermediatePath
       -- spacer
-      elAttr "li" ("class" =: "grow") blank
+      elClass "li" "grow" blank
       el "li" $ routeLink (MkConfiguration :/ ()) gear
   where
-    house = elAttr "i" ("class" =: "fa-solid fa-house") blank
-    gear = elAttr "i" ("class" =: "fa-solid fa-gear") blank
+    house = elClass "i" "fa-solid fa-house" blank
+    gear = elClass "i" "fa-solid fa-gear" blank
     homeOrText [] = house
     homeOrText [x] = text x
     homeOrText (_ : xs) = homeOrText xs
 
 spinner :: DomBuilder t m => m ()
 spinner =
-  elAttr
+  elClass
     "div"
-    ( "class"
-        =: T.unwords
-          [ "absolute",
-            "right-1/2",
-            "bottom-1/2",
-            "transform",
-            "translate-x-1/2",
-            "translate-y-1/2"
-          ]
+    ( T.unwords
+        [ "absolute",
+          "right-1/2",
+          "bottom-1/2",
+          "transform",
+          "translate-x-1/2",
+          "translate-y-1/2"
+        ]
     )
-    $ elAttr
+    $ elClass
       "div"
-      ( "class"
-          =: T.unwords
-            [ "border-t-transparent",
-              "border-solid",
-              "animate-spin",
-              "rounded-full",
-              "border-blue-400",
-              "border-4",
-              "h-8",
-              "w-8"
-            ]
+      ( T.unwords
+          [ "border-t-transparent",
+            "border-solid",
+            "animate-spin",
+            "rounded-full",
+            "border-blue-400",
+            "border-4",
+            "h-8",
+            "w-8"
+          ]
       )
       blank

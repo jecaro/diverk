@@ -37,22 +37,21 @@ configuration ::
   Maybe Config ->
   m (Event t Config)
 configuration mbConfig =
-  elAttr "div" ("class" =: "flex items-start md:h-screen md:pt-[20vh]") $
-    elAttr
+  elClass "div" "flex items-start md:h-screen md:pt-[20vh]" $
+    elClass
       "div"
-      ( "class"
-          =: T.unwords
-            [ "flex",
-              "flex-col",
-              "md:rounded-lg",
-              "md:max-w-md",
-              "md:shadow",
-              "w-screen",
-              "w-full",
-              "mx-auto",
-              "gap-4",
-              "p-4"
-            ]
+      ( T.unwords
+          [ "flex",
+            "flex-col",
+            "md:rounded-lg",
+            "md:max-w-md",
+            "md:shadow",
+            "w-screen",
+            "w-full",
+            "mx-auto",
+            "gap-4",
+            "p-4"
+          ]
       )
       $ do
         rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
@@ -189,10 +188,10 @@ inputWidget ::
   m (Dynamic t Text)
 inputWidget inputType label placeholder initialValue valid evValid mbHelp =
   el "div" $ do
-    elAttr "label" ("class" =: "block mb-2 text-sm text-gray-900") $
+    elClass "label" "block mb-2 text-sm text-gray-900" $
       text label
 
-    dyInput <- elAttr "div" ("class" =: "relative") $ do
+    dyInput <- elClass "div" "relative" $ do
       rec dyInput <-
             value
               <$> inputElement
@@ -223,23 +222,23 @@ inputWidget inputType label placeholder initialValue valid evValid mbHelp =
 
     elEye MkText = pure never
     elEye MkPassword = do
-      rec ev <- elAttr
+      rec ev <- elClass
             "div"
-            ("class" =: "absolute inset-y-0 right-0 pr-3 flex items-center")
+            "absolute inset-y-0 right-0 pr-3 flex items-center"
             $ do
-              (e, _) <- elDynAttr' "i" (eyeClasses <$> dyPasswordVisible) blank
+              (e, _) <- elDynClass' "i" (eyeClasses <$> dyPasswordVisible) blank
               pure $ domEvent Click e
           dyPasswordVisible <- toggle False ev
       pure $ updated dyPasswordVisible
 
-    eyeClasses = ("class" =:) . T.unwords . ("fa-solid" :) . pure . eyeIcon
+    eyeClasses = T.unwords . ("fa-solid" :) . pure . eyeIcon
 
     eyeIcon True = "fa-eye-slash"
     eyeIcon False = "fa-eye"
 
     elHelp Nothing = pure ()
     elHelp (Just help) =
-      elAttr "p" ("class" =: "mt-2 text-sm text-gray-500") $
+      elClass "p" "mt-2 text-sm text-gray-500" $
         text help
 
 inputClasses :: InputType -> Bool -> Text
