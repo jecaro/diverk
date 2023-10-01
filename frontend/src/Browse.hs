@@ -19,7 +19,9 @@ import Data.Text.Encoding.Base64 (decodeBase64With)
 import Data.Text.Encoding.Base64.Error (Base64Error)
 import Data.Text.Encoding.Error (UnicodeException)
 import qualified Data.Text.Lazy as LT
+import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Element (setInnerHTML)
+import qualified JSDOM.Element as JSDOM
 import JSDOM.Types (liftJSM)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink, routeLinkAttr)
@@ -195,7 +197,10 @@ contentWidget (StDirectory pathsToFiles) =
 contentWidget (StMarkdown html) =
   prerender_ blank $ do
     (e, _) <- elAttr' "article" ("class" =: "prose") blank
-    liftJSM $ setInnerHTML (_element_raw e) (LT.toStrict $ CM.renderHtml html)
+    liftJSM $
+      setInnerHTML
+        (JSDOM.Element . GHCJSDOM.unElement $ _element_raw e)
+        (LT.toStrict $ CM.renderHtml html)
 contentWidget (StOther code) =
   elAttr "article" ("class" =: "prose") . el "pre" . el "code" . text $ code
 contentWidget _ = spinner

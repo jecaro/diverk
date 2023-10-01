@@ -71,6 +71,7 @@ library
     commonmark,
     containers,
     extra,
+    ghcjs-dom,
     jsaddle,
     jsaddle-dom,
     lens,
