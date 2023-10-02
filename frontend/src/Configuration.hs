@@ -120,7 +120,8 @@ configuration mbConfig =
     inputOwner evValid =
       inputWidget
         MkText
-        "Owner *"
+        "Owner"
+        True
         "name"
         (fromMaybe "" mbOwner)
         (isJust mbOwner)
@@ -129,7 +130,8 @@ configuration mbConfig =
     inputRepo evValid =
       inputWidget
         MkText
-        "Repository *"
+        "Repository"
+        True
         "repository"
         (fromMaybe "" mbRepo)
         (isJust mbRepo)
@@ -139,6 +141,7 @@ configuration mbConfig =
       inputWidget
         MkPassword
         "Token"
+        False
         "github_xxx"
         (fromMaybe "" mbToken)
         True
@@ -180,16 +183,19 @@ inputWidget ::
   (DomBuilder t m, MonadHold t m, MonadFix m, PostBuild t m) =>
   InputType ->
   Text ->
+  Bool ->
   Text ->
   Text ->
   Bool ->
   Event t Bool ->
   Maybe Text ->
   m (Dynamic t Text)
-inputWidget inputType label placeholder initialValue valid evValid mbHelp =
+inputWidget inputType label mandatory placeholder initialValue valid evValid mbHelp =
   el "div" $ do
-    elClass "label" "block mb-2 text-sm text-gray-900" $
-      text label
+    elAttr
+      "label"
+      ("class" =: "block mb-2 text-sm text-gray-900" <> "for" =: inputId)
+      $ text inputLabel
 
     dyInput <- elClass "div" "relative" $ do
       rec dyInput <-
@@ -199,8 +205,9 @@ inputWidget inputType label placeholder initialValue valid evValid mbHelp =
                     & inputElementConfig_initialValue .~ initialValue
                     & initialAttributes
                       .~ ( "class" =: inputClasses' valid
-                             <> "placeholder" =: placeholder
                              <> "type" =: toText inputType
+                             <> "placeholder" =: placeholder
+                             <> "id" =: inputId
                          )
                     & modifyAttributes
                       .~ ( ((=:) "class" . Just . inputClasses' <$> evValid)
@@ -215,6 +222,9 @@ inputWidget inputType label placeholder initialValue valid evValid mbHelp =
     pure dyInput
   where
     inputClasses' = inputClasses inputType
+
+    inputId = T.toLower label
+    inputLabel = label <> if mandatory then " *" else ""
 
     toggleInputType MkText _ = mempty
     toggleInputType MkPassword True = "type" =: Just "text"
