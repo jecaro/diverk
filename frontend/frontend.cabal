@@ -70,8 +70,10 @@ library
     common,
     commonmark,
     containers,
+    dependent-sum,
     extra,
     ghcjs-dom,
+    http-types,
     jsaddle,
     jsaddle-dom,
     lens,
@@ -90,8 +92,11 @@ library
     Configuration
     JSDOM.Storage.Extra
     LocalStorage
+    Navbar
     Reflex.Extra
     Request
+    Search
+    Widgets
 
 executable frontend
   import: defaults

@@ -15,6 +15,7 @@ import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
 import Reflex.Dom.Core
+import Search (search)
 
 data State
   = -- | The initial state: before the config is loaded from the local storage
@@ -91,7 +92,8 @@ route ::
     RouteToUrl (R FrontendRoute) m,
     PerformEvent t m,
     TriggerEvent t m,
-    MonadIO (Performable m)
+    MonadIO (Performable m),
+    Routed t (R FrontendRoute) m
   ) =>
   R FrontendRoute ->
   State ->
@@ -104,6 +106,11 @@ route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
 route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
   browse config path
   pure never
+route
+  (MkSearch :/ keywords)
+  (MkConfigLoaded (Just (MkConfig owner repo (Just token)))) = do
+    search owner repo token keywords
+    pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
   setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
   pure never

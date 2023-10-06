@@ -5,6 +5,7 @@ module Common.Model
     Repo (..),
     Token (..),
     Config (..),
+    Path (..),
     owner,
     repo,
     token,
@@ -30,10 +31,16 @@ data Config = MkConfig
   }
   deriving stock (Eq, Show, Read)
 
+newtype Path = MkPath
+  { unPath :: [Text]
+  }
+  deriving stock (Eq, Show)
+
 concat
   <$> mapM
     makeWrapped
     [ ''Owner,
+      ''Path,
       ''Repo,
       ''Token
     ]

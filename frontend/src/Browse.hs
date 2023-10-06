@@ -1,6 +1,6 @@
 module Browse (browse) where
 
-import Common.Model (Config (..))
+import Common.Model (Config (..), Path (..))
 import Common.Route (FrontendRoute (..))
 import qualified Commonmark as CM
 import Control.Lens (preview, to, toListOf, (^.), (^?), _last)
@@ -10,8 +10,9 @@ import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Bifunctor (Bifunctor (first))
 import Data.Either.Extra (maybeToEither)
+import Data.Foldable (traverse_)
 import Data.List (inits)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
@@ -23,16 +24,13 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Element (setInnerHTML)
 import qualified JSDOM.Element as JSDOM
 import JSDOM.Types (liftJSM)
+import Navbar (house, liMenu, liSpacer, navbar)
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, SetRoute, routeLink, routeLinkAttr)
+import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute, routeLink)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import Request (contentsRequest)
-
-newtype PathToFile = MkPathToFile
-  { unPathToFile :: [Text]
-  }
-  deriving stock (Eq, Show)
+import Widgets (errorWidget, spinner)
 
 data Error
   = ErStatus Word
@@ -46,7 +44,7 @@ data Error
 data State
   = StInitial
   | StFetching
-  | StDirectory [PathToFile]
+  | StDirectory [Path]
   | StMarkdown (CM.Html ())
   | StOther Text
   deriving stock (Show)
@@ -91,11 +89,11 @@ responseToState response =
     toDirectory =
       fmap StDirectory
         . maybeToEither ErJSON
-        . traverse toPathToFile
+        . traverse toPath
         . toListOf values
 
-    toPathToFile :: JSON.Value -> Maybe PathToFile
-    toPathToFile = fmap MkPathToFile . parsePath
+    toPath :: JSON.Value -> Maybe Path
+    toPath = fmap MkPath . parsePath
 
     extension = T.takeWhileEnd (/= '.') . fromMaybe "" . preview _last
     parseContent = preview $ key "content" . _String . to withoutEOL
@@ -119,7 +117,8 @@ browse ::
     MonadHold t m,
     MonadFix m,
     SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m
+    RouteToUrl (R FrontendRoute) m,
+    Routed t (R FrontendRoute) m
   ) =>
   Config ->
   [Text] ->
@@ -134,49 +133,12 @@ browse MkConfig {..} path = do
       leftmost
         [LoStartRequest <$ evRequest, LoEndRequest <$> evResponse]
 
-  navbar path
+  navbar' path (isJust coToken)
   dyn_ . ffor dynState $ \case
-    Left err -> errorWidget path err
+    Left err -> errorWidget (errorToText err)
     Right state ->
       elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $
         contentWidget state
-
-errorWidget ::
-  ( RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m,
-    DomBuilder t m,
-    Prerender t m
-  ) =>
-  [Text] ->
-  Error ->
-  m ()
-errorWidget path err =
-  elClass "div" "flex flex-col p-4" $
-    elClass
-      "div"
-      ( T.unwords
-          [ "p-4",
-            "mx-auto",
-            "text-red-800",
-            "border",
-            "border-red-300",
-            "rounded-lg",
-            "bg-red-50"
-          ]
-      )
-      $ do
-        elClass "div" "flex items-center" $ do
-          elClass "i" "fa-solid fa-circle-info mr-2" blank
-          elClass "h3" "text-lg font-medium" $
-            text "An error occurred"
-        elClass "div" "text-sm" $ do
-          text $ errorToText err
-          el "br" blank
-          text "You can "
-          routeLinkAttr
-            ("class" =: "text-blue-600 hover:underline")
-            (MkBrowse :/ path)
-            (text "try again")
 
 contentWidget ::
   ( SetRoute t (R FrontendRoute) m,
@@ -187,7 +149,7 @@ contentWidget ::
   State ->
   m ()
 contentWidget (StDirectory pathsToFiles) =
-  forM_ pathsToFiles $ \(MkPathToFile pathToFile) ->
+  forM_ pathsToFiles $ \(MkPath pathToFile) ->
     el "div" $
       routeLink (MkBrowse :/ pathToFile)
         . text
@@ -204,54 +166,28 @@ contentWidget (StOther code) =
   elClass "article" "prose" . el "pre" . el "code" . text $ code
 contentWidget _ = spinner
 
-navbar ::
+navbar' ::
   ( RouteToUrl (R FrontendRoute) m,
     SetRoute t (R FrontendRoute) m,
     DomBuilder t m,
-    Prerender t m
+    Prerender t m,
+    MonadHold t m,
+    MonadFix m,
+    PostBuild t m,
+    Routed t (R FrontendRoute) m
   ) =>
   [Text] ->
+  Bool ->
   m ()
-navbar path = do
-  elClass "nav" "sticky shadow-md top-0 flex flex-col p-4 bg-white" $
-    elClass "ol" "flex gap-x-4  w-full" $ do
-      forM_ (inits path) $ \intermediatePath ->
-        el "li" $
-          routeLink (MkBrowse :/ intermediatePath) $ homeOrText intermediatePath
-      -- spacer
-      elClass "li" "grow" blank
-      el "li" $ routeLink (MkConfiguration :/ ()) gear
+navbar' path hasToken =
+  navbar $ do
+    traverse_ liIntermediatePath (inits path)
+    liSpacer
+    liMenu hasToken
   where
-    house = elClass "i" "fa-solid fa-house" blank
-    gear = elClass "i" "fa-solid fa-gear" blank
+    liIntermediatePath intermediatePath =
+      el "li" . routeLink (MkBrowse :/ intermediatePath) $
+        homeOrText intermediatePath
     homeOrText [] = house
     homeOrText [x] = text x
     homeOrText (_ : xs) = homeOrText xs
-
-spinner :: DomBuilder t m => m ()
-spinner =
-  elClass
-    "div"
-    ( T.unwords
-        [ "absolute",
-          "right-1/2",
-          "bottom-1/2",
-          "transform",
-          "translate-x-1/2",
-          "translate-y-1/2"
-        ]
-    )
-    $ elClass
-      "div"
-      ( T.unwords
-          [ "border-t-transparent",
-            "border-solid",
-            "animate-spin",
-            "rounded-full",
-            "border-blue-400",
-            "border-4",
-            "h-8",
-            "w-8"
-          ]
-      )
-      blank
