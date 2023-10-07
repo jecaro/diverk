@@ -16,7 +16,7 @@ navbar ::
   m () ->
   m ()
 navbar =
-  elClass "nav" "sticky shadow-md top-0 flex flex-col p-4 bg-white"
+  elClass "nav" "sticky shadow top-0 flex flex-col p-4 bg-white"
     . elClass "ol" "flex gap-x-4  w-full"
 
 liMenu ::
@@ -59,6 +59,7 @@ liMenu enableSearch = elClass "li" "" $ do
           elMenuItem search (MkSearch :/ []) "Search" $
             fmap (&& enableSearch) . dyOnCurrent
           elMenuItem gear (MkConfiguration :/ ()) "Settings" dyOnCurrent
+          elMenuItem info (MkAbout :/ ()) "About" dyOnCurrent
 
     elMenuItem icon route label dyRouteEnable =
       elClass "li" "px-4 py-2 hover:bg-gray-100" $
@@ -79,6 +80,9 @@ liSpacer = elClass "li" "grow" blank
 
 house :: DomBuilder t m => m ()
 house = elClass "i" "fa-solid fa-house" blank
+
+info :: DomBuilder t m => m ()
+info = elClass "i" "fa-solid fa-circle-info" blank
 
 gear :: DomBuilder t m => m ()
 gear = elClass "i" "fa-solid fa-gear" blank

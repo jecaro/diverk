@@ -35,6 +35,7 @@ data FrontendRoute :: * -> * where
   MkConfiguration :: FrontendRoute ()
   MkBrowse :: FrontendRoute [Text]
   MkSearch :: FrontendRoute [Text]
+  MkAbout :: FrontendRoute ()
 
 fullRouteEncoder ::
   Encoder
@@ -53,6 +54,7 @@ fullRouteEncoder =
         MkBrowse -> PathSegment "repo" pathOnlyEncoder
         MkConfiguration -> PathSegment "config" $ unitEncoder mempty
         MkSearch -> PathSegment "search" pathOnlyEncoder
+        MkAbout -> PathSegment "about" $ unitEncoder mempty
     )
 
 -- | This is the function that will be used to generate links to frontend routes.

@@ -1,4 +1,4 @@
-module Widgets (spinner, errorWidget) where
+module Widgets (card, errorWidget, spinner, elLink) where
 
 import Common.Route (FrontendRoute (..))
 import Data.Text (Text)
@@ -76,6 +76,31 @@ errorWidget msg = do
           el "br" blank
           text "You can "
           routeLinkDynAttr
-            (constDyn $ "class" =: "text-blue-600 hover:underline")
+            (constDyn $ "class" =: linkClasses)
             route
             $ text "try again"
+
+card :: DomBuilder t m => m a -> m a
+card =
+  elClass "div" "flex items-start md:h-screen md:pt-[20vh]"
+    . elClass
+      "div"
+      ( T.unwords
+          [ "flex",
+            "flex-col",
+            "md:rounded-lg",
+            "md:max-w-md",
+            "md:shadow",
+            "w-screen",
+            "w-full",
+            "mx-auto",
+            "gap-4",
+            "p-4"
+          ]
+      )
+
+linkClasses :: Text
+linkClasses = "text-blue-600 hover:underline"
+
+elLink :: DomBuilder t m => Text -> m () -> m ()
+elLink url = elAttr "a" ("class" =: linkClasses <> "href" =: url)

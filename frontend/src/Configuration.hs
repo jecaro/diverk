@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
 import Request (contentsRequest, rateLimitRequest, usersRequest)
+import Widgets (card)
 import Witherable (catMaybes)
 import Prelude hiding (unzip)
 
@@ -37,85 +38,69 @@ configuration ::
   Maybe Config ->
   m (Event t Config)
 configuration mbConfig =
-  elClass "div" "flex items-start md:h-screen md:pt-[20vh]" $
-    elClass
-      "div"
-      ( T.unwords
-          [ "flex",
-            "flex-col",
-            "md:rounded-lg",
-            "md:max-w-md",
-            "md:shadow",
-            "w-screen",
-            "w-full",
-            "mx-auto",
-            "gap-4",
-            "p-4"
-          ]
-      )
-      $ do
-        rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
-            dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
-            dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
+  card $ do
+    rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
+        dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
+        dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
 
-            -- The owner request
-            let evUserRequest = updated $ usersRequest <$> dyToken <*> dyOwner
-            evOwnerResponse <- debounceAndRequest evUserRequest
-            -- 401 means the token is wrong. In this case we assume the owner
-            -- exists. Because the token is wrong, the form cannot be submitted
-            -- anyway.
-            let evOwnerValid =
-                  leftmost
-                    [ -- The owner is valid
-                      is200Or401 <$> evOwnerResponse,
-                      -- It is currently edited
-                      False <$ updated dyOwner
-                    ]
+        -- The owner request
+        let evUserRequest = updated $ usersRequest <$> dyToken <*> dyOwner
+        evOwnerResponse <- debounceAndRequest evUserRequest
+        -- 401 means the token is wrong. In this case we assume the owner
+        -- exists. Because the token is wrong, the form cannot be submitted
+        -- anyway.
+        let evOwnerValid =
+              leftmost
+                [ -- The owner is valid
+                  is200Or401 <$> evOwnerResponse,
+                  -- It is currently edited
+                  False <$ updated dyOwner
+                ]
 
-            -- The repo request
-            let evContentRequest =
-                  updated $
-                    contentsRequest
-                      <$> dyToken <*> dyOwner <*> dyRepo <*> pure mempty
-            evRepoResponse <- debounceAndRequest evContentRequest
-            -- Same remark for 401
-            dyRepoExists <-
-              holdDyn (isJust mbRepo) $
-                leftmost
-                  [ is200Or401 <$> evRepoResponse,
-                    False <$ updated dyOwner,
-                    False <$ updated dyRepo
-                  ]
+        -- The repo request
+        let evContentRequest =
+              updated $
+                contentsRequest
+                  <$> dyToken <*> dyOwner <*> dyRepo <*> pure mempty
+        evRepoResponse <- debounceAndRequest evContentRequest
+        -- Same remark for 401
+        dyRepoExists <-
+          holdDyn (isJust mbRepo) $
+            leftmost
+              [ is200Or401 <$> evRepoResponse,
+                False <$ updated dyOwner,
+                False <$ updated dyRepo
+              ]
 
-            -- The token request
-            -- The token is valid:
-            -- - if empty
-            -- - if the rate limit endpoint returns 200
-            let evToken = updated dyToken
-                evMaybeTokenRequest = fmap rateLimitRequest <$> evToken
-            evTokenResponse <-
-              -- dont debounce the request if the token is empty
-              fmap (gate (isJust <$> current dyToken))
-                . debounceAndRequest
-                $ catMaybes evMaybeTokenRequest
-            let evTokenValidOrEmpty =
-                  leftmost
-                    [ -- Valid non empty token
-                      is200 <$> evTokenResponse,
-                      -- Empty token
-                      isNothing <$> evToken,
-                      -- Token currently edited
-                      False <$ evToken
-                    ]
-            -- In the initial state, the token is either empty either loaded
-            -- from the local storage. In both cases, we assume it is valid.
-            dyTokenValid <- holdDyn True evTokenValidOrEmpty
+        -- The token request
+        -- The token is valid:
+        -- - if empty
+        -- - if the rate limit endpoint returns 200
+        let evToken = updated dyToken
+            evMaybeTokenRequest = fmap rateLimitRequest <$> evToken
+        evTokenResponse <-
+          -- dont debounce the request if the token is empty
+          fmap (gate (isJust <$> current dyToken))
+            . debounceAndRequest
+            $ catMaybes evMaybeTokenRequest
+        let evTokenValidOrEmpty =
+              leftmost
+                [ -- Valid non empty token
+                  is200 <$> evTokenResponse,
+                  -- Empty token
+                  isNothing <$> evToken,
+                  -- Token currently edited
+                  False <$ evToken
+                ]
+        -- In the initial state, the token is either empty either loaded
+        -- from the local storage. In both cases, we assume it is valid.
+        dyTokenValid <- holdDyn True evTokenValidOrEmpty
 
-        let dyCanSave = (&&) <$> dyRepoExists <*> dyTokenValid
-        evSave <- saveButton dyCanSave
+    let dyCanSave = (&&) <$> dyRepoExists <*> dyTokenValid
+    evSave <- saveButton dyCanSave
 
-        let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
-        pure $ tag beConfig evSave
+    let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
+    pure $ tag beConfig evSave
   where
     inputOwner evValid =
       inputWidget

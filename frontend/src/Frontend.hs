@@ -3,12 +3,14 @@
 
 module Frontend (frontend) where
 
+import About (about)
 import Browse (browse)
 import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
 import Configuration (configuration)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
+import Data.Maybe (isJust)
 import LocalStorage (load, save)
 import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
@@ -117,4 +119,9 @@ route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
 route _ (MkConfigLoaded Nothing) = do
   setRoute . (MkConfiguration :/ () <$) =<< getPostBuild
   pure never
+route (MkAbout :/ ()) (MkConfigLoaded mbConfig) = do
+  about hasToken
+  pure never
+  where
+    hasToken = isJust $ coToken =<< mbConfig
 route _ _ = pure never

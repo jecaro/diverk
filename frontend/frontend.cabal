@@ -88,6 +88,7 @@ library
   exposed-modules:
     Frontend
   other-modules:
+    About
     Browse
     Configuration
     JSDOM.Storage.Extra
