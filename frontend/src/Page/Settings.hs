@@ -231,7 +231,7 @@ inputWidget inputType label mandatory placeholder initialValue valid evValid mbH
           dyPasswordVisible <- toggle False ev
       pure $ updated dyPasswordVisible
 
-    eyeClasses = T.unwords . (Icon.solid :) . pure . eyeIcon
+    eyeClasses = T.unwords . ([Icon.solid, "cursor-pointer"] <>) . pure . eyeIcon
 
     eyeIcon True = Icon.eyeSlashName
     eyeIcon False = Icon.eyeName

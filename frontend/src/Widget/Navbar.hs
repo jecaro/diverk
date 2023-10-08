@@ -48,7 +48,7 @@ liMenu enableSearch = elClass "li" "" $ do
       (e, _) <-
         elClass'
           "span"
-          (T.unwords $ Icon.solid : Icon.kebabName : ["px-2"])
+          (T.unwords $ Icon.solid : Icon.kebabName : ["cursor-pointer", "px-2"])
           blank
       let evClickOnButton = domEvent Click e
       dyMouseOverButton <-
@@ -59,7 +59,7 @@ liMenu enableSearch = elClass "li" "" $ do
         leftmost [True <$ evClickOnButton, False <$ evMouseClickElsewhere]
 
     elMenu =
-      elClass "div" "z-50 absolute top-[3.75rem] right-0 bg-white shadow" $
+      elClass "div" "absolute top-[3.75rem] right-0 bg-white shadow" $
         elClass "ul" "flex flex-col" $ do
           dyRoute <- askRoute
           let dyOnCurrent route = not . similar route <$> dyRoute
