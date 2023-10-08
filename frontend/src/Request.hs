@@ -1,8 +1,8 @@
 module Request
-  ( contentsRequest,
-    rateLimitRequest,
-    searchRequest,
-    usersRequest,
+  ( contents,
+    rateLimit,
+    search,
+    users,
   )
 where
 
@@ -15,20 +15,20 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.HTTP.Types.URI (renderSimpleQuery)
 import Reflex.Dom.Core
 
-usersRequest :: Maybe Token -> Owner -> XhrRequest ()
-usersRequest mbToken owner =
+users :: Maybe Token -> Owner -> XhrRequest ()
+users mbToken owner =
   xhrRequest "GET" (usersURL owner) (requestConfig mbToken)
 
-contentsRequest :: Maybe Token -> Owner -> Repo -> [Text] -> XhrRequest ()
-contentsRequest mbToken owner repo path =
+contents :: Maybe Token -> Owner -> Repo -> [Text] -> XhrRequest ()
+contents mbToken owner repo path =
   xhrRequest "GET" (contentsURL owner repo path) (requestConfig mbToken)
 
-rateLimitRequest :: Token -> XhrRequest ()
-rateLimitRequest token =
+rateLimit :: Token -> XhrRequest ()
+rateLimit token =
   xhrRequest "GET" rateLimitURL (requestConfig $ Just token)
 
-searchRequest :: Token -> Owner -> Repo -> [Text] -> XhrRequest ()
-searchRequest token owner repo keywords =
+search :: Token -> Owner -> Repo -> [Text] -> XhrRequest ()
+search token owner repo keywords =
   xhrRequest "GET" (searchURL <> queryParams) (requestConfig $ Just token)
   where
     queryParams =

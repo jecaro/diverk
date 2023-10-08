@@ -32,7 +32,7 @@ data BackendRoute :: * -> * where
 
 data FrontendRoute :: * -> * where
   MkHome :: FrontendRoute ()
-  MkConfiguration :: FrontendRoute ()
+  MkSettings :: FrontendRoute ()
   MkBrowse :: FrontendRoute [Text]
   MkSearch :: FrontendRoute [Text]
   MkAbout :: FrontendRoute ()
@@ -52,7 +52,7 @@ fullRouteEncoder =
     ( \case
         MkHome -> PathEnd $ unitEncoder mempty
         MkBrowse -> PathSegment "repo" pathOnlyEncoder
-        MkConfiguration -> PathSegment "config" $ unitEncoder mempty
+        MkSettings -> PathSegment "settings" $ unitEncoder mempty
         MkSearch -> PathSegment "search" pathOnlyEncoder
         MkAbout -> PathSegment "about" $ unitEncoder mempty
     )

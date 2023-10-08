@@ -1,13 +1,13 @@
-module About (about) where
+module Page.About (page) where
 
 import Common.Route (FrontendRoute)
 import Control.Monad.Fix (MonadFix)
-import Navbar (liMenu, liSpacer, navbar)
 import Obelisk.Route.Frontend (R, RouteToUrl, Routed, SetRoute)
 import Reflex.Dom.Core
-import Widgets (card, elLink)
+import qualified Widget
+import qualified Widget.Navbar as Navbar
 
-about ::
+page ::
   ( DomBuilder t m,
     SetRoute t (R FrontendRoute) m,
     RouteToUrl (R FrontendRoute) m,
@@ -19,14 +19,14 @@ about ::
   ) =>
   Bool ->
   m ()
-about enableSearch = do
-  navbar $
-    liSpacer >> liMenu enableSearch
-  card $ do
+page enableSearch = do
+  Navbar.widget $
+    Navbar.liSpacer >> Navbar.liMenu enableSearch
+  Widget.card $ do
     elClass "div" "text-2xl font-bold" $
       text "Diverk"
     el "div" $ do
       el "div" $
         text "A minimalist GitHub repository browser"
-      el "div" . elLink "https://github.com/jecaro/diverk" $
+      el "div" . Widget.link "https://github.com/jecaro/diverk" $
         text "Learn more"

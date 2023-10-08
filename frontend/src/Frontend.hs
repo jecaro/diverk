@@ -3,11 +3,8 @@
 
 module Frontend (frontend) where
 
-import About (about)
-import Browse (browse)
 import Common.Model (Config (..))
 import Common.Route (FrontendRoute (..))
-import Configuration (configuration)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (isJust)
@@ -16,8 +13,11 @@ import Obelisk.Frontend (Frontend (..))
 import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
+import qualified Page.About as About
+import qualified Page.Browse as Browse
+import qualified Page.Search as Search
+import qualified Page.Settings as Settings
 import Reflex.Dom.Core
-import Search (search)
 
 data State
   = -- | The initial state: before the config is loaded from the local storage
@@ -100,27 +100,27 @@ route ::
   R FrontendRoute ->
   State ->
   m (Event t State)
-route (MkConfiguration :/ ()) (MkConfigLoaded mbConfig) = do
-  evOk <- configuration mbConfig
+route (MkSettings :/ ()) (MkConfigLoaded mbConfig) = do
+  evOk <- Settings.page mbConfig
   evSaved <- save evOk
   setRoute $ MkBrowse :/ [] <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
 route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
-  browse config path
+  Browse.page config path
   pure never
 route
   (MkSearch :/ keywords)
   (MkConfigLoaded (Just (MkConfig owner repo (Just token)))) = do
-    search owner repo token keywords
+    Search.page owner repo token keywords
     pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
   setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
   pure never
 route _ (MkConfigLoaded Nothing) = do
-  setRoute . (MkConfiguration :/ () <$) =<< getPostBuild
+  setRoute . (MkSettings :/ () <$) =<< getPostBuild
   pure never
 route (MkAbout :/ ()) (MkConfigLoaded mbConfig) = do
-  about hasToken
+  About.page hasToken
   pure never
   where
     hasToken = isJust $ coToken =<< mbConfig

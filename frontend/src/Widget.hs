@@ -1,4 +1,4 @@
-module Widgets (card, errorWidget, spinner, elLink) where
+module Widget (card, error, spinner, link) where
 
 import Common.Route (FrontendRoute (..))
 import Data.Text (Text)
@@ -11,7 +11,9 @@ import Obelisk.Route.Frontend
     askRoute,
     routeLinkDynAttr,
   )
-import Reflex.Dom.Core
+import Reflex.Dom.Core hiding (link)
+import qualified Widget.Icon as Icon
+import Prelude hiding (error)
 
 spinner :: DomBuilder t m => m ()
 spinner =
@@ -41,7 +43,7 @@ spinner =
       )
       blank
 
-errorWidget ::
+error ::
   ( RouteToUrl (R FrontendRoute) m,
     SetRoute t (R FrontendRoute) m,
     DomBuilder t m,
@@ -51,7 +53,7 @@ errorWidget ::
   ) =>
   Text ->
   m ()
-errorWidget msg = do
+error msg = do
   route <- askRoute
   elClass "div" "flex flex-col p-4" $
     elClass
@@ -68,7 +70,7 @@ errorWidget msg = do
       )
       $ do
         elClass "div" "flex items-center" $ do
-          elClass "i" "fa-solid fa-circle-info mr-2" blank
+          Icon.iconClass Icon.infoName ["mr-2"]
           elClass "h3" "text-lg font-medium" $
             text "An error occurred"
         elClass "div" "text-sm" $ do
@@ -102,5 +104,5 @@ card =
 linkClasses :: Text
 linkClasses = "text-blue-600 hover:underline"
 
-elLink :: DomBuilder t m => Text -> m () -> m ()
-elLink url = elAttr "a" ("class" =: linkClasses <> "href" =: url)
+link :: DomBuilder t m => Text -> m () -> m ()
+link url = elAttr "a" ("class" =: linkClasses <> "href" =: url)

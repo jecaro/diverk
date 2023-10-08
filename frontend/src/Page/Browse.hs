@@ -1,4 +1,4 @@
-module Browse (browse) where
+module Page.Browse (page) where
 
 import Common.Model (Config (..), Path (..))
 import Common.Route (FrontendRoute (..))
@@ -24,13 +24,14 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Element (setInnerHTML)
 import qualified JSDOM.Element as JSDOM
 import JSDOM.Types (liftJSM)
-import Navbar (house, liMenu, liSpacer, navbar)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute, routeLink)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
-import Request (contentsRequest)
-import Widgets (errorWidget, spinner)
+import qualified Request
+import qualified Widget
+import qualified Widget.Icon as Icon
+import qualified Widget.Navbar as Navbar
 
 data Error
   = ErStatus Word
@@ -110,7 +111,7 @@ errorToText (ErMarkdown err) = "Markdown error: " <> T.pack (show err)
 errorToText ErRequest = "Request error"
 errorToText ErInvalid = "Invalid state"
 
-browse ::
+page ::
   ( DomBuilder t m,
     PostBuild t m,
     Prerender t m,
@@ -123,9 +124,9 @@ browse ::
   Config ->
   [Text] ->
   m ()
-browse MkConfig {..} path = do
+page MkConfig {..} path = do
   evRequest <-
-    (contentsRequest coToken coOwner coRepo path <$) <$> getPostBuild
+    (Request.contents coToken coOwner coRepo path <$) <$> getPostBuild
   evResponse <- onClient $ performRequestAsyncWithError evRequest
 
   dynState <-
@@ -135,7 +136,7 @@ browse MkConfig {..} path = do
 
   navbar' path (isJust coToken)
   dyn_ . ffor dynState $ \case
-    Left err -> errorWidget (errorToText err)
+    Left err -> Widget.error (errorToText err)
     Right state ->
       elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $
         contentWidget state
@@ -164,7 +165,7 @@ contentWidget (StMarkdown html) =
         (LT.toStrict $ CM.renderHtml html)
 contentWidget (StOther code) =
   elClass "article" "prose" . el "pre" . el "code" . text $ code
-contentWidget _ = spinner
+contentWidget _ = Widget.spinner
 
 navbar' ::
   ( RouteToUrl (R FrontendRoute) m,
@@ -180,14 +181,14 @@ navbar' ::
   Bool ->
   m ()
 navbar' path hasToken =
-  navbar $ do
+  Navbar.widget $ do
     traverse_ liIntermediatePath (inits path)
-    liSpacer
-    liMenu hasToken
+    Navbar.liSpacer
+    Navbar.liMenu hasToken
   where
     liIntermediatePath intermediatePath =
       el "li" . routeLink (MkBrowse :/ intermediatePath) $
         homeOrText intermediatePath
-    homeOrText [] = house
+    homeOrText [] = Icon.house
     homeOrText [x] = text x
     homeOrText (_ : xs) = homeOrText xs

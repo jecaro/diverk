@@ -1,6 +1,6 @@
 {-# LANGUAGE RecursiveDo #-}
 
-module Configuration (configuration) where
+module Page.Settings (page) where
 
 import Common.Model
   ( Config (..),
@@ -20,12 +20,13 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
-import Request (contentsRequest, rateLimitRequest, usersRequest)
-import Widgets (card)
+import qualified Request
+import qualified Widget
+import qualified Widget.Icon as Icon
 import Witherable (catMaybes)
 import Prelude hiding (unzip)
 
-configuration ::
+page ::
   ( DomBuilder t m,
     Prerender t m,
     MonadHold t m,
@@ -37,14 +38,14 @@ configuration ::
   ) =>
   Maybe Config ->
   m (Event t Config)
-configuration mbConfig =
-  card $ do
+page mbConfig =
+  Widget.card $ do
     rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
         dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
         dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
 
         -- The owner request
-        let evUserRequest = updated $ usersRequest <$> dyToken <*> dyOwner
+        let evUserRequest = updated $ Request.users <$> dyToken <*> dyOwner
         evOwnerResponse <- debounceAndRequest evUserRequest
         -- 401 means the token is wrong. In this case we assume the owner
         -- exists. Because the token is wrong, the form cannot be submitted
@@ -60,7 +61,7 @@ configuration mbConfig =
         -- The repo request
         let evContentRequest =
               updated $
-                contentsRequest
+                Request.contents
                   <$> dyToken <*> dyOwner <*> dyRepo <*> pure mempty
         evRepoResponse <- debounceAndRequest evContentRequest
         -- Same remark for 401
@@ -77,7 +78,7 @@ configuration mbConfig =
         -- - if empty
         -- - if the rate limit endpoint returns 200
         let evToken = updated dyToken
-            evMaybeTokenRequest = fmap rateLimitRequest <$> evToken
+            evMaybeTokenRequest = fmap Request.rateLimit <$> evToken
         evTokenResponse <-
           -- dont debounce the request if the token is empty
           fmap (gate (isJust <$> current dyToken))
@@ -221,15 +222,19 @@ inputWidget inputType label mandatory placeholder initialValue valid evValid mbH
             "div"
             "absolute inset-y-0 right-0 pr-3 flex items-center"
             $ do
-              (e, _) <- elDynClass' "i" (eyeClasses <$> dyPasswordVisible) blank
+              (e, _) <-
+                elDynClass'
+                  "span"
+                  (eyeClasses <$> dyPasswordVisible)
+                  blank
               pure $ domEvent Click e
           dyPasswordVisible <- toggle False ev
       pure $ updated dyPasswordVisible
 
-    eyeClasses = T.unwords . ("fa-solid" :) . pure . eyeIcon
+    eyeClasses = T.unwords . (Icon.solid :) . pure . eyeIcon
 
-    eyeIcon True = "fa-eye-slash"
-    eyeIcon False = "fa-eye"
+    eyeIcon True = Icon.eyeSlashName
+    eyeIcon False = Icon.eyeName
 
     elHelp Nothing = pure ()
     elHelp (Just help) =

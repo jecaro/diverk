@@ -1,4 +1,4 @@
-module Search (search) where
+module Page.Search (page) where
 
 import Common.Model (Owner, Path (..), Repo, Token)
 import Common.Route (FrontendRoute (MkBrowse, MkSearch))
@@ -12,7 +12,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import JSDOM.Generated.HTMLElement (focus)
 import JSDOM.Types (liftJSM)
-import Navbar (liMenu, navbar)
 import Obelisk.Route.Frontend
   ( R,
     RouteToUrl,
@@ -24,8 +23,10 @@ import Obelisk.Route.Frontend
   )
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
-import Request (searchRequest)
-import Widgets (errorWidget, spinner)
+import qualified Request
+import qualified Widget
+import qualified Widget.Icon as Icon
+import qualified Widget.Navbar as Navbar
 import qualified Witherable as W
 
 data Error
@@ -78,7 +79,7 @@ errorToText ErJSON = "Invalid JSON"
 errorToText ErRequest = "Request error"
 errorToText ErInvalid = "Invalid state"
 
-search ::
+page ::
   ( DomBuilder t m,
     PostBuild t m,
     Prerender t m,
@@ -93,9 +94,9 @@ search ::
   Token ->
   [Text] ->
   m ()
-search owner repo token keywords = do
-  navbar $
-    liSearchInput keywords >>= liButton >> liMenu True
+page owner repo token keywords = do
+  Navbar.widget $
+    liSearchInput keywords >>= liButton >> Navbar.liMenu True
   elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $ do
     -- We dont send the request if there is no keywords
     evRequest <-
@@ -109,12 +110,12 @@ search owner repo token keywords = do
           ]
     dyn_ . ffor dyState $ \case
       Right StInitial -> blank
-      Right StFetching -> spinner
+      Right StFetching -> Widget.spinner
       Right (StResults []) -> el "div" $ text "No results"
       Right (StResults paths) -> traverse_ elPath paths
-      Left err -> errorWidget $ errorToText err
+      Left err -> Widget.error $ errorToText err
   where
-    request = searchRequest token owner repo keywords
+    request = Request.search token owner repo keywords
     elPath (MkPath pieces) =
       el "div" $
         routeLink (MkBrowse :/ pieces) . text $ T.intercalate "/" pieces
@@ -172,9 +173,9 @@ liButton dyKeywords =
       False -> searchIcon
   where
     dyHasKeyWords = not . null <$> dyKeywords
-    searchIcon = elDynClass "i" (iconClasses <$> dyHasKeyWords) blank
+    searchIcon = elDynClass "span" (iconClasses <$> dyHasKeyWords) blank
     iconClasses =
-      T.unwords . mappend ["fa-solid", "fa-magnifying-glass"] . pure . opacity
+      T.unwords . mappend [Icon.solid, Icon.searchName] . pure . opacity
     opacity True = mempty
     opacity False = "opacity-50"
     searchRoute = (MkSearch :/)

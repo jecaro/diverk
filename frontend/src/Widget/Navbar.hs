@@ -1,4 +1,4 @@
-module Navbar (navbar, liMenu, liSpacer, house) where
+module Widget.Navbar (widget, liMenu, liSpacer) where
 
 import Common.Route (FrontendRoute (..))
 import Control.Monad.Fix (MonadFix)
@@ -6,16 +6,23 @@ import Data.GADT.Compare (geq)
 import Data.Maybe (isJust)
 import qualified Data.Text as T
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute, askRoute, routeLinkAttr)
+import Obelisk.Route.Frontend
+  ( RouteToUrl,
+    Routed,
+    SetRoute,
+    askRoute,
+    routeLinkAttr,
+  )
 import Reflex.Dom.Core
 import Reflex.Extra (getGlobalClick)
+import qualified Widget.Icon as Icon
 
-navbar ::
+widget ::
   ( DomBuilder t m
   ) =>
   m () ->
   m ()
-navbar =
+widget =
   elClass "nav" "sticky shadow top-0 flex flex-col p-4 bg-white"
     . elClass "ol" "flex gap-x-4  w-full"
 
@@ -38,7 +45,11 @@ liMenu enableSearch = elClass "li" "" $ do
     False -> blank
   where
     elMenuButton = do
-      (e, _) <- elClass' "i" "fa-solid fa-ellipsis-vertical px-2" blank
+      (e, _) <-
+        elClass'
+          "span"
+          (T.unwords $ Icon.solid : Icon.kebabName : ["px-2"])
+          blank
       let evClickOnButton = domEvent Click e
       dyMouseOverButton <-
         toggle False $ leftmost [domEvent Mouseleave e, domEvent Mouseover e]
@@ -53,13 +64,13 @@ liMenu enableSearch = elClass "li" "" $ do
           dyRoute <- askRoute
           let dyOnCurrent route = not . similar route <$> dyRoute
 
-          elMenuItem house (MkBrowse :/ []) "Browse" dyOnCurrent
+          elMenuItem Icon.house (MkBrowse :/ []) "Browse" dyOnCurrent
           -- Search should only be available if there is a token. That's a
           -- requirement of the GitHub API.
-          elMenuItem search (MkSearch :/ []) "Search" $
+          elMenuItem Icon.search (MkSearch :/ []) "Search" $
             fmap (&& enableSearch) . dyOnCurrent
-          elMenuItem gear (MkConfiguration :/ ()) "Settings" dyOnCurrent
-          elMenuItem info (MkAbout :/ ()) "About" dyOnCurrent
+          elMenuItem Icon.gear (MkSettings :/ ()) "Settings" dyOnCurrent
+          elMenuItem Icon.info (MkAbout :/ ()) "About" dyOnCurrent
 
     elMenuItem icon route label dyRouteEnable =
       elClass "li" "px-4 py-2 hover:bg-gray-100" $
@@ -77,15 +88,3 @@ liMenu enableSearch = elClass "li" "" $ do
 
 liSpacer :: DomBuilder t m => m ()
 liSpacer = elClass "li" "grow" blank
-
-house :: DomBuilder t m => m ()
-house = elClass "i" "fa-solid fa-house" blank
-
-info :: DomBuilder t m => m ()
-info = elClass "i" "fa-solid fa-circle-info" blank
-
-gear :: DomBuilder t m => m ()
-gear = elClass "i" "fa-solid fa-gear" blank
-
-search :: DomBuilder t m => m ()
-search = elClass "i" "fa-solid fa-magnifying-glass" blank
