@@ -1,18 +1,13 @@
 module Widget.Navbar (widget, liMenu, liSpacer) where
 
 import Common.Route (FrontendRoute (..))
+import Control.Monad (void)
 import Control.Monad.Fix (MonadFix)
 import Data.GADT.Compare (geq)
 import Data.Maybe (isJust)
 import qualified Data.Text as T
 import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend
-  ( RouteToUrl,
-    Routed,
-    SetRoute,
-    askRoute,
-    routeLinkAttr,
-  )
+import Obelisk.Route.Frontend (Routed, SetRoute (setRoute), askRoute)
 import Reflex.Dom.Core
 import Reflex.Extra (getGlobalClick)
 import qualified Widget.Icon as Icon
@@ -33,7 +28,6 @@ liMenu ::
     MonadFix m,
     PostBuild t m,
     Prerender t m,
-    RouteToUrl (R FrontendRoute) m,
     Routed t (R FrontendRoute) m
   ) =>
   Bool ->
@@ -59,7 +53,7 @@ liMenu enableSearch = elClass "li" "" $ do
         leftmost [True <$ evClickOnButton, False <$ evMouseClickElsewhere]
 
     elMenu =
-      elClass "div" "absolute top-[3.75rem] right-0 bg-white shadow" $
+      elClass "div" "absolute top-[3.75rem] right-0 bg-white shadow" $ do
         elClass "ul" "flex flex-col" $ do
           dyRoute <- askRoute
           let dyOnCurrent route = not . similar route <$> dyRoute
@@ -72,18 +66,18 @@ liMenu enableSearch = elClass "li" "" $ do
           elMenuItem Icon.gear (MkSettings :/ ()) "Settings" dyOnCurrent
           elMenuItem Icon.info (MkAbout :/ ()) "About" dyOnCurrent
 
-    elMenuItem icon route label dyRouteEnable =
-      elClass "li" "px-4 py-2 hover:bg-gray-100" $
-        dyn_ . ffor (dyRouteEnable route) . flip (divOrLink route) $ do
-          icon
+    elMenuItem icon route label dyRouteEnable = do
+      let dyRouteEnable' = dyRouteEnable route
+      (e, _) <- elDynClass' "li" (liClasses <$> dyRouteEnable') $
+        elClass "div" "flex items-center gap-2" $ do
+          void icon
           text label
+      let evClickIfRouteEnable = gate (current dyRouteEnable') $ domEvent Click e
+      setRoute $ route <$ evClickIfRouteEnable
 
-    divOrLink route True =
-      routeLinkAttr ("class" =: T.unwords divOrLinkClasses) route
-    divOrLink _ False =
-      elClass "div" . T.unwords $ "opacity-50" : divOrLinkClasses
+    liClasses True = "px-4 py-2 hover:bg-gray-100 cursor-pointer"
+    liClasses False = "px-4 py-2 hover:bg-gray-100 opacity-50"
 
-    divOrLinkClasses = ["flex", "items-center", "gap-2"]
     similar (x :/ _) (y :/ _) = isJust $ geq x y
 
 liSpacer :: DomBuilder t m => m ()

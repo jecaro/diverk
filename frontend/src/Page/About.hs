@@ -2,7 +2,7 @@ module Page.About (page) where
 
 import Common.Route (FrontendRoute)
 import Control.Monad.Fix (MonadFix)
-import Obelisk.Route.Frontend (R, RouteToUrl, Routed, SetRoute)
+import Obelisk.Route.Frontend (R, Routed, SetRoute)
 import Reflex.Dom.Core
 import qualified Widget
 import qualified Widget.Navbar as Navbar
@@ -10,7 +10,6 @@ import qualified Widget.Navbar as Navbar
 page ::
   ( DomBuilder t m,
     SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m,
     Routed t (R FrontendRoute) m,
     MonadFix m,
     MonadHold t m,
