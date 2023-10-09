@@ -1,16 +1,21 @@
+{-# LANGUAGE CPP #-}
+
 module Page.Search (page) where
 
 import Common.Model (Owner, Path (..), Repo, Token)
 import Common.Route (FrontendRoute (MkBrowse, MkSearch))
+import Control.Arrow ((***))
 import Control.Lens (to, toListOf, (^.), _Unwrapped)
-import Control.Monad (join)
+import Control.Monad (join, when)
 import Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Foldable (traverse_)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Generated.HTMLElement (focus)
+import qualified JSDOM.HTMLInputElement as JSDOM
 import JSDOM.Types (liftJSM)
 import Obelisk.Route.Frontend
   ( R,
@@ -19,6 +24,7 @@ import Obelisk.Route.Frontend
     SetRoute,
     dynRouteLink,
     routeLink,
+    setRoute,
     pattern (:/),
   )
 import Reflex.Dom.Core
@@ -128,9 +134,25 @@ liSearchInput ::
   ) =>
   [Text] ->
   m (Dynamic t [Text])
-liSearchInput keywords = elClass "li" "grow" $
-  fmap join . prerender (pure mempty) $ do
-    ie <-
+liSearchInput keywords = elClass "li" "grow" $ do
+  (dyKeywords, evEnterOnNonEmptyKeywords) <- fmap unwrap . prerender (pure mempty) $
+    do
+      ie <- inputElement'
+      -- Set focus on the input element after the page is loaded
+      -- see: https://github.com/reflex-frp/reflex-dom/issues/435
+      when (null keywords) $ do
+        delayedPostBuild <- delay 0.1 =<< getPostBuild
+        performEvent_ $
+          liftJSM (focus $ htmlElement ie) <$ delayedPostBuild
+
+      let dyKeywords = T.words <$> value ie
+          evEnterOnNonEmptyKeywords =
+            ffilter (not . null) . tagPromptlyDyn dyKeywords $ keypress Enter ie
+      pure (dyKeywords, evEnterOnNonEmptyKeywords)
+  setRoute $ (MkSearch :/) <$> evEnterOnNonEmptyKeywords
+  pure dyKeywords
+  where
+    inputElement' =
       inputElement
         ( def
             & inputElementConfig_initialValue
@@ -150,12 +172,9 @@ liSearchInput keywords = elClass "li" "grow" $
                        ]
                )
         )
-    -- Set focus on the input element after the page is loaded
-    -- see: https://github.com/reflex-frp/reflex-dom/issues/435
-    delayedPostBuild <- delay 0.1 =<< getPostBuild
-    performEvent_ $
-      liftJSM (focus $ _inputElement_raw ie) <$ delayedPostBuild
-    pure $ T.words <$> value ie
+    unwrap = (join *** switchDyn) . splitDynPure
+    htmlElement =
+      JSDOM.HTMLInputElement . GHCJSDOM.unHTMLInputElement . _inputElement_raw
 
 liButton ::
   ( RouteToUrl (R FrontendRoute) m,
