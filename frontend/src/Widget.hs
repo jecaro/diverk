@@ -84,7 +84,7 @@ error msg = do
 
 card :: DomBuilder t m => m a -> m a
 card =
-  elClass "div" "flex items-start md:h-screen md:pt-[20vh]"
+  elClass "div" "flex items-start md:h-full md:pt-[20vh]"
     . elClass
       "div"
       ( T.unwords
