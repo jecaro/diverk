@@ -13,6 +13,7 @@
     # Uncomment and set this to `true` to indicate your acceptance:
     # terms.security.acme.acceptTerms = false;
   }
+, androidIsRelease ? false
 }:
 with obelisk;
 project ./. ({ pkgs, ... }: {
@@ -35,8 +36,20 @@ project ./. ({ pkgs, ... }: {
 
   staticFiles = import ./static { inherit pkgs; };
 
-  android.applicationId = "org.jecaro.diverk";
-  android.displayName = "Diverk";
+  android = {
+    applicationId = "org.jecaro.diverk";
+    displayName = "Diverk";
+    isRelease = androidIsRelease;
+    resources = reflex-platform.android.buildIcons {
+      src = ./assets/icon.png;
+    };
+    version = {
+      code = "2";
+      name = "1.2";
+    };
+  } // pkgs.lib.optionalAttrs androidIsRelease {
+    gradleTask = "bundleRelease";
+  };
 
   ios.bundleIdentifier = "org.jecaro.diverk";
   ios.bundleName = "Diverk";
