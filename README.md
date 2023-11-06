@@ -30,10 +30,10 @@ rate limit is 10 searches per hour.
 
 The app is written in Haskell using the [obelisk][obelisk] framework. 
 
-Start a shell with `obelisk` command:
+Start a shell with `ob` command:
 
 ```bash
-$ ./shell-obelisk.sh
+$ nix-shell
 ```
 
 Run locally the app with:
