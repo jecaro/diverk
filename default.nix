@@ -45,8 +45,8 @@ project ./. ({ pkgs, ... }: {
       src = ./assets/icon.png;
     };
     version = {
-      code = "2";
-      name = "1.2";
+      code = "3";
+      name = "1.3";
     };
   } // pkgs.lib.optionalAttrs androidIsRelease {
     gradleTask = "bundleRelease";
