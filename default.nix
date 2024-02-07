@@ -24,13 +24,22 @@ project ./. ({ pkgs, ... }: {
   };
 
   overrides = self: super: {
-    # The version (v1.1.1) shipped with the haskell platform does not build. We
+    # The version (v1.1.1) shipped with the reflex platform does not build. We
     # use a more recent version.
     lens-aeson = pkgs.haskell.lib.doJailbreak (self.callHackageDirect
       {
         pkg = "lens-aeson";
         ver = "1.1.3";
         sha256 = "W5/NtS8z3AnJ5fHfKStDiRAAfvwT6cz+qpzYP9oJj6A=";
+      }
+      { });
+    # The version (v0.2.2) shipped with the reflex platform does not build
+    # with ghc-js.
+    commonmark = pkgs.haskell.lib.doJailbreak (self.callHackageDirect
+      {
+        pkg = "commonmark";
+        ver = "0.1.1.4";
+        sha256 = "sha256-+pF0wrLCeRlPYzxX5b30KjpBTxRtu+K5ORlZtSVSf0k=";
       }
       { });
   };
