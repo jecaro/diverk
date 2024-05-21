@@ -172,19 +172,17 @@ navbar' ::
     SetRoute t (R FrontendRoute) m,
     DomBuilder t m,
     Prerender t m,
-    MonadHold t m,
-    MonadFix m,
-    PostBuild t m,
-    Routed t (R FrontendRoute) m
+    Routed t (R FrontendRoute) m,
+    PostBuild t m
   ) =>
   [Text] ->
   Bool ->
   m ()
 navbar' path hasToken =
   Navbar.widget $ do
-    traverse_ liIntermediatePath (inits path)
-    Navbar.liSpacer
-    Navbar.liMenu hasToken
+    elClass "div" "breadcrumbs flex gap-x-4 w-full" $
+      el "ul" $ traverse_ liIntermediatePath (inits path)
+    Navbar.menu hasToken
   where
     liIntermediatePath intermediatePath =
       el "li" . routeLink (MkBrowse :/ intermediatePath) $

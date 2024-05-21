@@ -102,7 +102,7 @@ page ::
   m ()
 page owner repo token keywords = do
   Navbar.widget $
-    liSearchInput keywords >>= liButton >> Navbar.liMenu True
+    searchInput keywords >>= searchButton >> Navbar.menu True
   elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $ do
     -- We dont send the request if there is no keywords
     evRequest <-
@@ -126,7 +126,7 @@ page owner repo token keywords = do
       el "div" $
         routeLink (MkBrowse :/ pieces) . text $ T.intercalate "/" pieces
 
-liSearchInput ::
+searchInput ::
   ( SetRoute t (R FrontendRoute) m,
     PostBuild t m,
     Prerender t m,
@@ -134,7 +134,7 @@ liSearchInput ::
   ) =>
   [Text] ->
   m (Dynamic t [Text])
-liSearchInput keywords = elClass "li" "grow" $ do
+searchInput keywords = elClass "form-control" "flex-1" $ do
   (dyKeywords, evEnterOnNonEmptyKeywords) <- fmap unwrap . prerender (pure mempty) $
     do
       ie <- inputElement'
@@ -159,24 +159,15 @@ liSearchInput keywords = elClass "li" "grow" $ do
             .~ T.unwords keywords
             & initialAttributes
             .~ ( "placeholder" =: "Keywords"
-                   <> "class"
-                     =: T.unwords
-                       [ "pl-0",
-                         "h-6",
-                         "w-full",
-                         "grow",
-                         "border-none",
-                         "focus:outline-none",
-                         "focus:ring-0",
-                         "text-gray-900"
-                       ]
+                   <> "type" =: "text"
+                   <> "class" =: "input input-bordered w-full"
                )
         )
     unwrap = (join *** switchDyn) . splitDynPure
     htmlElement =
       JSDOM.HTMLInputElement . GHCJSDOM.unHTMLInputElement . _inputElement_raw
 
-liButton ::
+searchButton ::
   ( RouteToUrl (R FrontendRoute) m,
     SetRoute t (R FrontendRoute) m,
     PostBuild t m,
@@ -185,8 +176,8 @@ liButton ::
   ) =>
   Dynamic t [Text] ->
   m ()
-liButton dyKeywords =
-  el "li" $
+searchButton dyKeywords =
+  elClass "label" "btn btn-ghost btn-circle" $
     dyn_ . ffor dyHasKeyWords $ \case
       True -> dynRouteLink (searchRoute <$> dyKeywords) searchIcon
       False -> searchIcon

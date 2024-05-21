@@ -177,11 +177,10 @@ inputWidget ::
   Maybe Text ->
   m (Dynamic t Text)
 inputWidget inputType label mandatory placeholder initialValue valid evValid mbHelp =
-  el "div" $ do
-    elAttr
-      "label"
-      ("class" =: "block mb-2 text-sm text-gray-900" <> "for" =: inputId)
-      $ text inputLabel
+  elClass "div" "form-control w-full" $ do
+    elAttr "label" ("class" =: "label" <> "for" =: inputId) $
+      elClass "span" "label-text" $
+        text inputLabel
 
     dyInput <- elClass "div" "relative" $ do
       rec dyInput <-
@@ -238,52 +237,22 @@ inputWidget inputType label mandatory placeholder initialValue valid evValid mbH
 
     elHelp Nothing = pure ()
     elHelp (Just help) =
-      elClass "p" "mt-2 text-sm text-gray-500" $
-        text help
+      elClass "label" "label" $
+        elClass "span" "label-text-alt" $
+          text help
 
 inputClasses :: InputType -> Bool -> Text
 inputClasses inputType valid =
   T.unwords $
-    [ "bg-gray-50",
-      "border",
-      "rounded-lg",
-      "block",
-      "w-full",
-      "p-2.5"
-    ]
+    ["input", "input-bordered", "w-full"]
       <> validClasses valid
       <> inputTypeClasses inputType
   where
-    validClasses True =
-      [ "border-gray-300",
-        "text-gray-900",
-        "focus:ring-blue-600",
-        "focus:border-blue-600"
-      ]
-    validClasses False =
-      [ "border-red-300",
-        "text-red-900",
-        "focus:ring-red-600",
-        "focus:border-red-600"
-      ]
+    validClasses True = mempty
+    validClasses False = ["input-error"]
     -- Make room for the eye icon
     inputTypeClasses MkPassword = ["pr-10"]
     inputTypeClasses MkText = mempty
 
 buttonClasses :: Text
-buttonClasses =
-  T.unwords
-    [ "w-full",
-      "text-white",
-      "bg-blue-600",
-      "focus:ring-4",
-      "focus:outline-none",
-      "focus:ring-blue-300",
-      "font-medium",
-      "rounded-lg",
-      "text-sm",
-      "px-5",
-      "py-2.5",
-      "text-center",
-      "disabled:opacity-50"
-    ]
+buttonClasses = T.unwords ["w-full", "btn", "btn-primary"]

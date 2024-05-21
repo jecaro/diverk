@@ -35,7 +35,7 @@ spinner =
             "border-solid",
             "animate-spin",
             "rounded-full",
-            "border-blue-400",
+            "border-primary",
             "border-4",
             "h-8",
             "w-8"
@@ -55,32 +55,17 @@ error ::
   m ()
 error msg = do
   route <- askRoute
-  elClass "div" "flex flex-col p-4" $
-    elClass
-      "div"
-      ( T.unwords
-          [ "p-4",
-            "mx-auto",
-            "text-red-800",
-            "border",
-            "border-red-300",
-            "rounded-lg",
-            "bg-red-50"
-          ]
-      )
-      $ do
-        elClass "div" "flex items-center" $ do
-          Icon.iconClass Icon.infoName ["mr-2"]
-          elClass "h3" "text-lg font-medium" $
-            text "An error occurred"
-        elClass "div" "text-sm" $ do
-          text msg
-          el "br" blank
-          text "You can "
-          routeLinkDynAttr
-            (constDyn $ "class" =: linkClasses)
-            route
-            $ text "try again"
+  elClass "div" "p-4" $
+    elClass "div" (T.unwords ["alert", "alert-error", "shadow-lg"]) $
+      do
+        el "div" $ do
+          Icon.iconClass Icon.infoName mempty
+          el "div" $ do
+            elClass "h3" "font-bold" $ text "An error occurred "
+            elClass "div" "text-xs" $ text msg
+        el "div" $
+          routeLinkDynAttr (constDyn $ "class" =: "link") route $
+            text "try again"
 
 card :: DomBuilder t m => m a -> m a
 card =
@@ -91,6 +76,7 @@ card =
           [ "flex",
             "flex-col",
             "md:rounded-lg",
+            "md:bg-base-200",
             "md:max-w-md",
             "md:shadow",
             "w-screen",
@@ -101,8 +87,5 @@ card =
           ]
       )
 
-linkClasses :: Text
-linkClasses = "text-blue-600 hover:underline"
-
 link :: DomBuilder t m => Text -> m () -> m ()
-link url = elAttr "a" ("class" =: linkClasses <> "href" =: url)
+link url = elAttr "a" ("class" =: "link" <> "href" =: url)

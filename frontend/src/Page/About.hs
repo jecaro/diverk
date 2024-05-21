@@ -1,7 +1,6 @@
 module Page.About (page) where
 
 import Common.Route (FrontendRoute)
-import Control.Monad.Fix (MonadFix)
 import Obelisk.Route.Frontend (R, Routed, SetRoute)
 import Reflex.Dom.Core
 import qualified Widget
@@ -11,16 +10,13 @@ page ::
   ( DomBuilder t m,
     SetRoute t (R FrontendRoute) m,
     Routed t (R FrontendRoute) m,
-    MonadFix m,
-    MonadHold t m,
-    PostBuild t m,
-    Prerender t m
+    PostBuild t m
   ) =>
   Bool ->
   m ()
 page enableSearch = do
   Navbar.widget $
-    Navbar.liSpacer >> Navbar.liMenu enableSearch
+    Navbar.spacer >> Navbar.menu enableSearch
   Widget.card $ do
     elClass "div" "text-2xl font-bold" $
       text "Diverk"
