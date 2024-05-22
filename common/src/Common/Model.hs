@@ -6,6 +6,7 @@ module Common.Model
     Token (..),
     Config (..),
     Path (..),
+    darkMode,
     owner,
     repo,
     token,
@@ -27,7 +28,8 @@ newtype Token = MkToken {unToken :: Text}
 data Config = MkConfig
   { coOwner :: Owner,
     coRepo :: Repo,
-    coToken :: Maybe Token
+    coToken :: Maybe Token,
+    coDarkMode :: Bool
   }
   deriving stock (Eq, Show, Read)
 

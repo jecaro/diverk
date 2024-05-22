@@ -7,6 +7,7 @@ import Common.Model
     Owner (..),
     Repo (..),
     Token (..),
+    darkMode,
     owner,
     repo,
     token,
@@ -43,6 +44,7 @@ page mbConfig =
     rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
         dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
         dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
+        dyDarkMode <- inputDarkMode
 
         -- The owner request
         let evUserRequest = updated $ Request.users <$> dyToken <*> dyOwner
@@ -100,7 +102,12 @@ page mbConfig =
     let dyCanSave = (&&) <$> dyRepoExists <*> dyTokenValid
     evSave <- saveButton dyCanSave
 
-    let beConfig = current $ MkConfig <$> dyOwner <*> dyRepo <*> dyToken
+    let beConfig =
+          current $
+            MkConfig <$> dyOwner
+              <*> dyRepo
+              <*> dyToken
+              <*> dyDarkMode
     pure $ tag beConfig evSave
   where
     inputOwner evValid =
@@ -133,6 +140,25 @@ page mbConfig =
         True
         evValid
         (Just "Needed to access private repositories")
+
+    inputDarkMode =
+      elClass "div" "form-control" $
+        elClass "label" "label cursor-pointer" $ do
+          elClass "span" "label-text" $
+            text "Dark mode"
+          _inputElement_checked
+            <$> inputElement
+              ( def
+                  & inputElementConfig_initialChecked
+                    .~ fromMaybe
+                      False
+                      mbDarkMode
+                  & initialAttributes
+                    .~ ( "class" =: "toggle"
+                           <> "type" =: "checkbox"
+                       )
+              )
+
     saveButton dyEnable = do
       (ev, _) <-
         elDynAttr'
@@ -144,6 +170,7 @@ page mbConfig =
     mbOwner = mbConfig ^? _Just . owner . _Wrapped
     mbRepo = mbConfig ^? _Just . repo . _Wrapped
     mbToken = mbConfig ^? _Just . token . _Just . _Wrapped
+    mbDarkMode = mbConfig ^? _Just . darkMode
 
     mkToken "" = Nothing
     mkToken txToken = Just $ MkToken txToken

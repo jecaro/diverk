@@ -11,4 +11,10 @@
   .input-error:focus {
     @apply border-error;
   }
+  [type="checkbox"]:checked {
+    background-image: none;
+  }
+  [type="checkbox"]:focus {
+    box-shadow: var(--handleoffsetcalculator) 0 0 2px var(--tglbg) inset,0 0 0 2px var(--tglbg) inset,var(--togglehandleborder);
+  }
 }

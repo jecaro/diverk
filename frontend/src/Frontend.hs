@@ -110,7 +110,7 @@ route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
   pure never
 route
   (MkSearch :/ keywords)
-  (MkConfigLoaded (Just (MkConfig owner repo (Just token)))) = do
+  (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
     Search.page owner repo token keywords
     pure never
 route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
