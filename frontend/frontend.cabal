@@ -96,6 +96,7 @@ library
     Page.Search
     Reflex.Extra
     Request
+    Theme
     Widget
     Widget.Icon
     Widget.Navbar

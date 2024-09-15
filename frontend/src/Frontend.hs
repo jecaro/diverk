@@ -3,8 +3,10 @@
 
 module Frontend (frontend) where
 
-import Common.Model (Config (..))
+import Common.Model (Config (..), darkMode)
 import Common.Route (FrontendRoute (..))
+import Control.Lens (preview, to, _Just)
+import Control.Monad (void)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (isJust)
@@ -18,6 +20,8 @@ import qualified Page.Browse as Browse
 import qualified Page.Search as Search
 import qualified Page.Settings as Settings
 import Reflex.Dom.Core
+import Theme (setDarkModeOn)
+import Witherable (catMaybes)
 
 data State
   = -- | The initial state: before the config is loaded from the local storage
@@ -77,12 +81,18 @@ frontendBody = do
   evSettingsLoaded <- fmap MkConfigLoaded <$> load
   dyRoute <- askRoute
 
-  rec dyState <-
-        holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
+  rec dyState <- holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
+      let dyDarkModeOnRouteChange = getDarkMode <$> dyState <* dyRoute
+          evDarkModeOnRouteChange = catMaybes $ updated dyDarkModeOnRouteChange
+      void $ setDarkModeOn evDarkModeOnRouteChange
       evSettingsSaved <-
         switchHold never =<< dyn (route <$> dyRoute <*> dyState)
 
   pure ()
+  where
+    getConfig (MkConfigLoaded mbConfig) = mbConfig
+    getConfig _ = Nothing
+    getDarkMode = preview (to getConfig . _Just . darkMode)
 
 route ::
   ( DomBuilder t m,

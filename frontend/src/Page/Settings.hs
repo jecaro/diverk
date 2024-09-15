@@ -13,7 +13,7 @@ import Common.Model
     token,
   )
 import Control.Lens (to, (^.), (^?), _Just, _Wrapped)
-import Control.Monad ((<=<))
+import Control.Monad (void, (<=<))
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (fromMaybe, isJust, isNothing)
@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
 import qualified Request
+import Theme (getSystemDarkModeEvent, setDarkModeOn)
 import qualified Widget
 import qualified Widget.Icon as Icon
 import Witherable (catMaybes)
@@ -45,6 +46,8 @@ page mbConfig =
         dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
         dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
         dyDarkMode <- inputDarkMode
+
+        void . setDarkModeOn $ updated dyDarkMode
 
         -- The owner request
         let evUserRequest = updated $ Request.users <$> dyToken <*> dyOwner
@@ -141,7 +144,13 @@ page mbConfig =
         evValid
         (Just "Needed to access private repositories")
 
-    inputDarkMode =
+    inputDarkMode = do
+      evSystemDarkMode <- getSystemDarkModeEvent
+      let darkModeFromConfig = fromMaybe False mbDarkMode
+          evSystemDarkModeWhenNotSet
+            -- Dont default with the system when we have a value in the config
+            | isJust mbDarkMode = never
+            | otherwise = evSystemDarkMode
       elClass "div" "form-control" $
         elClass "label" "label cursor-pointer" $ do
           elClass "span" "label-text" $
@@ -149,14 +158,10 @@ page mbConfig =
           _inputElement_checked
             <$> inputElement
               ( def
-                  & inputElementConfig_initialChecked
-                    .~ fromMaybe
-                      False
-                      mbDarkMode
+                  & inputElementConfig_initialChecked .~ darkModeFromConfig
+                  & inputElementConfig_setChecked .~ evSystemDarkModeWhenNotSet
                   & initialAttributes
-                    .~ ( "class" =: "toggle"
-                           <> "type" =: "checkbox"
-                       )
+                    .~ ("class" =: "toggle" <> "type" =: "checkbox")
               )
 
     saveButton dyEnable = do
