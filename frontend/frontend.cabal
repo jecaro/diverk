@@ -83,7 +83,9 @@ library
     obelisk-generated-static,
     obelisk-route,
     reflex-dom-core,
+    string-interpolate,
     text,
+    transformers,
     witherable,
   exposed-modules:
     Frontend
