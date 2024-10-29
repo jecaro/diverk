@@ -2,6 +2,7 @@
 , obelisk ? import ./.obelisk/impl {
     inherit system;
     iosSdkVersion = "13.2";
+    reflex-platform-func = import ./dep/reflex-platform;
 
     # You must accept the Android Software Development Kit License Agreement at
     # https://developer.android.com/studio/terms in order to build Android apps.
