@@ -2,6 +2,7 @@
 *.o
 .attr-cache
 .cabal-sandbox
+/android-app-release.aab
 TAGS
 cabal-ghcjs.project
 cabal.project.local
