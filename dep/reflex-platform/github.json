@@ -1,8 +1,8 @@
 {
-  "owner": "jecaro",
+  "owner": "reflex-frp",
   "repo": "reflex-platform",
-  "branch": "bump-target-sdk-version",
+  "branch": "develop",
   "private": false,
-  "rev": "cd860634657e9b7f3f1df512d4e0e3beced1fec1",
+  "rev": "3033a310cd7a9dab41ee35472015b44a6c89e12f",
   "sha256": "0j71l1h3wswrkmq5hagbmadrnydb5ksymhifmvrk9x8dnkjzy0nn"
 }
