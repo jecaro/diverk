@@ -43,7 +43,7 @@ frontendHead = do
   elAttr
     "meta"
     ( "name" =: "viewport"
-        <> "contents" =: "width=device-width, initial-scale=1.0"
+        <> "content" =: "width=device-width, initial-scale=1.0"
     )
     blank
 
