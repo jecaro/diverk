@@ -2,6 +2,10 @@
 , obelisk ? import ./.obelisk/impl {
     inherit system;
     iosSdkVersion = "13.2";
+    # ExplanationNote: GHC 8.8, 8.10 and maybe others
+    # do not work when targeting android-aarch32
+    # See https://github.com/obsidiansystems/obelisk/issues/1116
+    useGHC810 = false;
     reflex-platform-func = import ./dep/reflex-platform;
 
     # You must accept the Android Software Development Kit License Agreement at
@@ -24,7 +28,11 @@ project ./. ({ pkgs, ... }: {
     hlint = pkgs.haskell.packages.ghc8107.hlint;
   };
 
-  overrides = self: super: {
+  overrides = self: super: with pkgs.haskell.lib; {
+    # ExplanationNote: `base64` wants a more recent `base` when using GHC <8.10,
+    # but it still compiles when just jailbreaking its constraints.
+    base64 = doJailbreak super.base64;
+
     # The version (v1.1.1) shipped with the reflex platform does not build. We
     # use a more recent version.
     lens-aeson = pkgs.haskell.lib.doJailbreak (self.callHackageDirect
