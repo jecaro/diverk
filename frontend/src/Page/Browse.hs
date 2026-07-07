@@ -15,9 +15,8 @@ import Data.List (inits)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.ByteString.Base64 as B64
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import Data.Text.Encoding.Base64 (decodeBase64With)
-import Data.Text.Encoding.Base64.Error (Base64Error)
 import Data.Text.Encoding.Error (UnicodeException)
 import qualified Data.Text.Lazy as LT
 import qualified GHCJS.DOM.Types as GHCJSDOM
@@ -36,7 +35,7 @@ import qualified Widget.Navbar as Navbar
 data Error
   = ErStatus Word
   | ErJSON
-  | ErBase64 (Base64Error UnicodeException)
+  | ErBase64 UnicodeException
   | ErMarkdown CM.ParseError
   | ErRequest
   | ErInvalid
@@ -78,7 +77,8 @@ responseToState response =
       base64Content <- maybeToEither ErJSON $ parseContent v
       rawContent <-
         first ErBase64
-          . decodeBase64With decodeUtf8'
+          . decodeUtf8'
+          . B64.decodeLenient
           $ encodeUtf8 base64Content
       case extension path of
         "md" -> do

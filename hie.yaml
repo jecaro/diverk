@@ -1,11 +1,5 @@
 cradle:
   cabal:
-    - path: "backend/src"
-      component: "lib:backend"
-
-    - path: "backend/src-bin/main.hs"
-      component: "backend:exe:backend"
-
     - path: "common/src"
       component: "lib:common"
 

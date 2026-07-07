@@ -37,6 +37,17 @@ data FrontendRoute :: * -> * where
   MkSearch :: FrontendRoute [Text]
   MkAbout :: FrontendRoute ()
 
+-- Derive GShow/GEq/GCompare/UniverseSome/ArgDict for the route GADTs. This
+-- splice must appear *before* fullRouteEncoder: a top-level TH splice starts a
+-- new declaration group, so the instances it generates are only in scope for
+-- code that follows it (GHC 9.x enforces this; GHC 8.10 was more lenient).
+concat
+  <$> mapM
+    deriveRouteComponent
+    [ ''BackendRoute,
+      ''FrontendRoute
+    ]
+
 fullRouteEncoder ::
   Encoder
     (Either Text)
@@ -56,11 +67,3 @@ fullRouteEncoder =
         MkSearch -> PathSegment "search" pathOnlyEncoder
         MkAbout -> PathSegment "about" $ unitEncoder mempty
     )
-
--- | This is the function that will be used to generate links to frontend routes.
-concat
-  <$> mapM
-    deriveRouteComponent
-    [ ''BackendRoute,
-      ''FrontendRoute
-    ]

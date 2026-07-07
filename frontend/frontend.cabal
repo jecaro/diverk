@@ -19,7 +19,6 @@ common defaults
   if impl(ghc >= 8.8)
     ghc-options: -Wmissing-deriving-strategies
   default-extensions:
-    AutoDeriveTypeable
     BangPatterns
     BinaryLiterals
     ConstraintKinds
@@ -42,7 +41,6 @@ common defaults
     InstanceSigs
     KindSignatures
     LambdaCase
-    MonadFailDesugaring
     MultiParamTypeClasses
     MultiWayIf
     NamedFieldPuns
@@ -66,7 +64,7 @@ library
   build-depends:
     aeson,
     base,
-    base64,
+    base64-bytestring,
     common,
     commonmark,
     containers,
@@ -78,9 +76,6 @@ library
     jsaddle-dom,
     lens,
     lens-aeson,
-    obelisk-executable-config-lookup,
-    obelisk-frontend,
-    obelisk-generated-static,
     obelisk-route,
     reflex-dom-core,
     string-interpolate,
@@ -111,11 +106,10 @@ executable frontend
     base,
     common,
     frontend,
-    obelisk-frontend,
-    obelisk-generated-static,
+    ghc-experimental,
+    jsaddle-wasm,
     obelisk-route,
-    reflex-dom,
-  ghc-options: -threaded
-  if impl(ghcjs)
-    ghc-options: -dedupe
-    cpp-options: -DGHCJS_BROWSER
+    reflex-dom-core,
+    text,
+  -- Build a WASM reactor module exporting hs_start (GHC WebAssembly backend).
+  ghc-options: -no-hs-main -optl-mexec-model=reactor "-optl-Wl,--export=hs_start"

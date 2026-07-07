@@ -1,3 +1,47 @@
-optional-packages:
-  *
-write-ghc-environment-files: never
+packages:
+  common/
+  frontend/
+
+if arch(wasm32)
+  -- Required for TemplateHaskell. When using wasm32-wasi-cabal from
+  -- ghc-wasm-meta, this is superseded by the global cabal.config.
+  shared: True
+
+package aeson
+  flags: -ordered-keymap
+
+-- We drop Obelisk but keep its standalone routing library, which provides
+-- Obelisk.Route and Obelisk.Route.Frontend (Routed/SetRoute/RouteToUrl/
+-- runRouteViewT/routeLink). It is the only Obelisk package still used.
+--
+-- Pinned to the upstream `ym/ghc-9.14-wasm` branch, which fixes the GHC 9.x
+-- source incompatibilities (import scoping of forM/lift/etc.) that the
+-- v1.3.0.0 release does not build under. obelisk-route needs its sibling
+-- `tabulation` and `obelisk-executable-config-lookup` libraries.
+source-repository-package
+  type: git
+  location: https://github.com/obsidiansystems/obelisk
+  subdir: lib/route
+  tag: b0b16ee72b90517d0ee90e5ea670ed76345dde57
+
+source-repository-package
+  type: git
+  location: https://github.com/obsidiansystems/obelisk
+  subdir: lib/tabulation
+  tag: b0b16ee72b90517d0ee90e5ea670ed76345dde57
+
+source-repository-package
+  type: git
+  location: https://github.com/obsidiansystems/obelisk
+  subdir: lib/executable-config/lookup
+  tag: b0b16ee72b90517d0ee90e5ea670ed76345dde57
+
+-- These build with -Werror; new GHC 9.12 warnings would otherwise fail the build.
+package obelisk-route
+  ghc-options: -Wwarn
+
+package tabulation
+  ghc-options: -Wwarn
+
+package obelisk-executable-config-lookup
+  ghc-options: -Wwarn

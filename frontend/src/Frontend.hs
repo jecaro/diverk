@@ -1,7 +1,6 @@
 {-# LANGUAGE RecursiveDo #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Frontend (frontend) where
+module Frontend (frontendHead, frontendBody) where
 
 import Common.Model (Config (..), darkMode)
 import Common.Route (FrontendRoute (..))
@@ -11,8 +10,6 @@ import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (isJust)
 import LocalStorage (load, save)
-import Obelisk.Frontend (Frontend (..))
-import Obelisk.Generated.Static (static)
 import Obelisk.Route (R, pattern (:/))
 import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
 import qualified Page.About as About
@@ -30,13 +27,6 @@ data State
     MkConfigLoaded (Maybe Config)
   deriving stock (Show, Eq)
 
-frontend :: Frontend (R FrontendRoute)
-frontend =
-  Frontend
-    { _frontend_head = frontendHead,
-      _frontend_body = frontendBody
-    }
-
 frontendHead :: DomBuilder t m => m ()
 frontendHead = do
   el "title" $ text "Diverk"
@@ -49,14 +39,14 @@ frontendHead = do
 
   elAttr
     "link"
-    ( "href" =: $(static "css/styles.css")
+    ( "href" =: "css/styles.css"
         <> "type" =: "text/css"
         <> "rel" =: "stylesheet"
     )
     blank
   elAttr
     "link"
-    ( "href" =: $(static "fontawesome/css/all.css")
+    ( "href" =: "fontawesome/css/all.css"
         <> "type" =: "text/css"
         <> "rel" =: "stylesheet"
     )

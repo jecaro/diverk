@@ -1,6 +1,6 @@
 module.exports = {
   content: [
-    './frontend/**/*.hs'
+    '../../frontend/**/*.hs'
   ],
   theme: {
     extend: {},
