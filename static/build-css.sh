@@ -19,7 +19,6 @@ if [ ! -d node_modules ]; then
   npm install --no-audit --no-fund --loglevel=error
 fi
 
-rm -rf "$out"
 mkdir -p "$out/css" "$out/fontawesome/css"
 
 # Tailwind (base/components/utilities) + daisyui + autoprefixer + cssnano.

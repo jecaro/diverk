@@ -32,6 +32,7 @@
           # JS/CSS toolchain: WASI shim deps, tailwind/postcss build, http-server.
           pkgs.nodejs
           pkgs.git
+          pkgs.just
         ];
 
         shellHook = ''

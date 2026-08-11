@@ -24,8 +24,7 @@ wasm32-wasi-cabal build exe:frontend
 
 hs_wasm=$(find ../dist-newstyle -name 'frontend.wasm' | head -1)
 
-rm -rf dist
-mkdir dist
+mkdir -p dist
 
 "$(wasm32-wasi-ghc --print-libdir)/post-link.mjs" \
   --input "$hs_wasm" --output dist/ghc_wasm_jsffi.js
