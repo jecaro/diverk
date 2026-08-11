@@ -3,6 +3,8 @@
 .attr-cache
 .cabal-sandbox
 /android-app-release.aab
+/scratch
+/static/src/node_modules
 TAGS
 cabal-ghcjs.project
 cabal.project.local
@@ -14,8 +16,10 @@ dist/
 diverk.keystore
 errors.err
 ghcid-output.txt
+node_modules/
 profile/
 result
 result-*
 static.out
+static/out/
 tags
