@@ -21,6 +21,14 @@
       # (base 4.22) does not resolve. 9.12 (base 4.21) is the version the
       # upstream ghc-wasm-reflex-examples validates against.
       wasmToolchain = ghc-wasm-meta.packages.${system}.all_9_12;
+
+      npmDeps = pkgs.buildNpmPackage {
+        name = "diverk-npm-deps";
+        src = ./static/src;
+        npmDepsHash = "sha256-DDKNL2xJMPG7BpsN1Nnpz4EVnOL+PeirStMWkwORg5Y=";
+        dontBuild = true;
+        installPhase = "cp -r node_modules $out";
+      };
     in
     {
       devShells.${system}.default = pkgs.mkShell {
@@ -40,6 +48,7 @@
           echo "  wasm32-wasi-ghc:   $(command -v wasm32-wasi-ghc || echo 'MISSING')"
           echo "  wasm32-wasi-cabal: $(command -v wasm32-wasi-cabal || echo 'MISSING')"
           echo "  node:              $(command -v node || echo 'MISSING')"
+          ln -sfn ${npmDeps} static/src/node_modules
         '';
       };
     };

@@ -14,11 +14,6 @@ set -euo pipefail
 cd "$(dirname "$0")/src"
 out="${1:-$(cd .. && pwd)/out}"
 
-if [ ! -d node_modules ]; then
-  echo "installing node deps (first run)..."
-  npm install --no-audit --no-fund --loglevel=error
-fi
-
 mkdir -p "$out/css" "$out/fontawesome/css"
 
 # Tailwind (base/components/utilities) + daisyui + autoprefixer + cssnano.
