@@ -15,7 +15,12 @@
     let
       system = "x86_64-linux";
 
-      pkgs = import nixpkgs { inherit system; };
+      pkgs = import nixpkgs {
+        inherit system;
+        # Required to compose the (unfree) Android SDK for the `android` shell.
+        config.allowUnfree = true;
+        config.android_sdk.accept_license = true;
+      };
 
       # wasm32-wasi-ghc, wasm32-wasi-cabal, wizer, wasm-opt, post-link.mjs, …
       wasmToolchain = nix-wasm.inputs.ghc-wasm-meta.packages.${system}.all_9_14;
@@ -86,6 +91,7 @@
         }
       );
 
+      # CSS + FontAwesome npm deps (Tailwind, PostCSS, etc.)
       diverk-npm-deps = pkgs.buildNpmPackage {
         name = "diverk-npm-deps";
         src = ./static/src;
@@ -93,6 +99,35 @@
         dontBuild = true;
         installPhase = "mkdir $out && cp -r node_modules $out/node_modules";
       };
+
+      # Frontend JS bundling deps (esbuild + @bjorn3/browser_wasi_shim).
+      diverk-frontend-deps = pkgs.buildNpmPackage {
+        name = "diverk-frontend-deps";
+        src = ./frontend;
+        npmDepsHash = "sha256-juxYJBlvRu7U5ZiuyLA8dGSY+8v8OQ4J38M8/m3jqlc=";
+        dontBuild = true;
+        installPhase = "mkdir $out && cp -r node_modules $out/node_modules";
+      };
+
+      # Capacitor CLI + Android runtime deps.
+      diverk-mobile-deps = pkgs.buildNpmPackage {
+        name = "diverk-mobile-deps";
+        src = ./mobile;
+        npmDepsHash = "sha256-qnHbGGp1JUeD5PvLCAWXhklaXNE1S7SgZCSRxR0DXk8=";
+        dontBuild = true;
+        installPhase = "mkdir $out && cp -r node_modules $out/node_modules";
+      };
+
+      # --- Android SDK (lazy: only built when the `android` shell is used) ---
+      # Versions match what a Capacitor 6/7 project targets (AGP 8, JDK 17,
+      # compileSdk 34). Re-align these with mobile/android after `cap add`.
+      androidSdk =
+        (pkgs.androidenv.composeAndroidPackages {
+          platformVersions = [ "34" ];
+          buildToolsVersions = [ "34.0.0" ];
+          }).androidsdk;
+      androidSdkRoot = "${androidSdk}/libexec/android-sdk";
+
     in
     {
       packages.${system} = rec {
@@ -109,7 +144,7 @@
 
         diverk-wasm = pkgs.stdenv.mkDerivation {
           name = "diverk-wasm";
-          nativeBuildInputs = [ wasmToolchain pkgs.nodejs ];
+          nativeBuildInputs = [ wasmToolchain pkgs.nodejs pkgs.esbuild ];
           dontUnpack = true;
           buildPhase = ''
             mkdir -p $out
@@ -118,7 +153,10 @@
             "$(wasm32-wasi-ghc --print-libdir)/post-link.mjs" \
               --input $out/bin.wasm --output $out/ghc_wasm_jsffi.js
             cp ${./frontend/index.html} $out/index.html
-            cp ${./frontend/index.js}   $out/index.js
+            cp ${./frontend/index.js} index.js
+            ln -s ${diverk-frontend-deps}/node_modules node_modules
+            esbuild index.js --bundle --format=esm \
+              --external:./ghc_wasm_jsffi.js --outfile=$out/index.js
           '';
           dontInstall = true;
         };
@@ -129,22 +167,41 @@
         };
       };
 
-      devShells.${system}.default = pkgs.mkShell {
-        name = "diverk-wasm";
+      devShells.${system} = {
+        # `nix develop` — WASM + Android build shell.
         # shellFor pre-populates GHC_PACKAGE_PATH with WASM-compiled packages
         # so wasm32-wasi-cabal only needs to compile common/ and frontend/.
-        inputsFrom = [
-          (wasmHaskellPkgs.shellFor {
-            packages = ps: [ ps.frontend ps.common ];
-            nativeBuildInputs = [ wasmToolchain ];
-          })
-        ];
+        default = pkgs.mkShell {
+          name = "diverk";
+          inputsFrom = [
+            (wasmHaskellPkgs.shellFor {
+              packages = ps: [ ps.frontend ps.common ];
+              nativeBuildInputs = [ wasmToolchain ];
+            })
+          ];
 
-        packages = [ pkgs.nodejs pkgs.git pkgs.just ];
+          packages = [
+            pkgs.nodejs
+            pkgs.git
+            pkgs.just
+            pkgs.esbuild
+            pkgs.jdk17
+            androidSdk
+            pkgs.gradle
+          ];
 
-        shellHook = ''
-          ln -sfn ${diverk-npm-deps}/node_modules static/src/node_modules
-        '';
+          ANDROID_SDK_ROOT = androidSdkRoot;
+          ANDROID_HOME = androidSdkRoot;
+
+          shellHook = ''
+            ln -sfn ${diverk-npm-deps}/node_modules static/src/node_modules
+            ln -sfn ${diverk-frontend-deps}/node_modules frontend/node_modules
+            ln -sfn ${diverk-mobile-deps}/node_modules mobile/node_modules
+            export JAVA_HOME="${pkgs.jdk17.home}"
+            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/34.0.0/aapt2 $GRADLE_OPTS"
+          '';
+        };
+
       };
     };
 }

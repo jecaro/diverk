@@ -1,0 +1,10 @@
+{
+  "name": "diverk-frontend-shell",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Web shell for the Diverk WASM SPA",
+  "devDependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.3.0",
+    "esbuild": "^0.24.0"
+  }
+}

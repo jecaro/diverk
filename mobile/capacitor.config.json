@@ -1,0 +1,8 @@
+{
+  "appId": "org.jecaro.diverk",
+  "appName": "Diverk",
+  "webDir": "../frontend/dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

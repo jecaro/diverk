@@ -38,12 +38,17 @@ else
   wasm-tools strip -o dist/bin.wasm dist/bin.wasm
 fi
 
-cp index.html index.js dist/
+cp index.html dist/
+
+# Bundle npm modules from index.js
+esbuild index.js --bundle --format=esm \
+  --external:./ghc_wasm_jsffi.js --outfile=dist/index.js
 
 # Static assets (Tailwind CSS + FontAwesome), if built.
 if [ -d ../static/out ]; then
-  cp -rL ../static/out/css dist/css
-  cp -rL ../static/out/fontawesome dist/fontawesome
+  # --no-preserve=mode because static/out may contain read-only files copied from the nix store
+  cp -rL --no-preserve=mode ../static/out/css dist/css
+  cp -rL --no-preserve=mode ../static/out/fontawesome dist/fontawesome
   echo "copied css/ and fontawesome/ from ../static/out"
 else
   echo "WARNING: ../static/out not found; app will render unstyled."

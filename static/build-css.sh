@@ -22,7 +22,8 @@ npx postcss css/styles.css -o "$out/css/styles.css"
 
 # FontAwesome, straight from its npm package.
 fa=node_modules/@fortawesome/fontawesome-free
-cp "$fa/css/all.min.css" "$out/fontawesome/css/all.css"
-cp -r "$fa/webfonts" "$out/fontawesome/webfonts"
+# --no-preserve=mode because node_modules is a nix store symlink (read-only files)
+cp --no-preserve=mode "$fa/css/all.min.css" "$out/fontawesome/css/all.css"
+cp -r --no-preserve=mode "$fa/webfonts" "$out/fontawesome/webfonts"
 
 echo "css built into $out ($(du -h "$out/css/styles.css" | cut -f1) styles.css)"

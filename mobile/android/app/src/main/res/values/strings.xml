@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Diverk</string>
+    <string name="title_activity_main">Diverk</string>
+    <string name="package_name">org.jecaro.diverk</string>
+    <string name="custom_url_scheme">org.jecaro.diverk</string>
+</resources>

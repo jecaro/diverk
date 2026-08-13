@@ -3,6 +3,8 @@
 .attr-cache
 .cabal-sandbox
 /android-app-release.aab
+/frontend/node_modules
+/mobile/node_modules
 /scratch
 /static/src/node_modules
 TAGS

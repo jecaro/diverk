@@ -1,0 +1,16 @@
+{
+  "name": "diverk-mobile",
+  "version": "1.5.0",
+  "private": true,
+  "description": "Capacitor Android wrapper for the Diverk WASM SPA.",
+  "scripts": {
+    "copy": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6",
+    "@capacitor/core": "^6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6"
+  }
+}

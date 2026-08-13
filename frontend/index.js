@@ -1,4 +1,4 @@
-import { WASI, OpenFile, File, ConsoleStdout } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.3.0/dist/index.js";
+import { WASI, OpenFile, File, ConsoleStdout } from "@bjorn3/browser_wasi_shim";
 import ghc_wasm_jsffi from "./ghc_wasm_jsffi.js";
 
 const args = [];
@@ -19,7 +19,8 @@ const options = { debug: false };
 const wasi = new WASI(args, env, fds, options);
 
 const instance_exports = {};
-const { instance } = await WebAssembly.instantiateStreaming(fetch("bin.wasm"), {
+const bytes = await (await fetch("bin.wasm")).arrayBuffer();
+const { instance } = await WebAssembly.instantiate(bytes, {
   wasi_snapshot_preview1: wasi.wasiImport,
   ghc_wasm_jsffi: ghc_wasm_jsffi(instance_exports),
 });
