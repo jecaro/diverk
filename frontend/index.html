@@ -2,6 +2,10 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <!-- base href pins relative asset paths to the root so they resolve correctly
+         when the SPA fallback serves this page for deep routes (e.g. /owner/repo).
+         Change this if deploying under a subpath. -->
+    <base href="/">
   </head>
   <body>
     <script>globalThis.example = "diverk";</script>

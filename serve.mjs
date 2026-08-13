@@ -32,7 +32,13 @@ createServer(async (req, res) => {
     res.setHeader("Content-Type", types[extname(file)] ?? "application/octet-stream");
     res.end(body);
   } catch {
-    res.statusCode = 404;
-    res.end("not found");
+    try {
+      const body = await readFile(join(root, "index.html"));
+      res.setHeader("Content-Type", "text/html");
+      res.end(body);
+    } catch {
+      res.statusCode = 404;
+      res.end("not found");
+    }
   }
 }).listen(port, () => console.log(`serving ${root} on http://localhost:${port}`));
