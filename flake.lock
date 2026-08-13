@@ -1,5 +1,20 @@
 {
   "nodes": {
+    "flake-compat": {
+      "locked": {
+        "lastModified": 1761640442,
+        "narHash": "sha256-AtrEP6Jmdvrqiv4x2xa5mrtaIp3OEe8uBYCDZDS+hu8=",
+        "owner": "nix-community",
+        "repo": "flake-compat",
+        "rev": "4a56054d8ffc173222d09dad23adf4ba946c8884",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "flake-compat",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -21,47 +36,68 @@
     "ghc-wasm-meta": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nix-wasm",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1775305067,
+        "narHash": "sha256-KFWRYVYPgsXu51stX/7/416qc31HFltfQiHPc6nEmH0=",
+        "owner": "haskell-wasm",
+        "repo": "ghc-wasm-meta",
+        "rev": "60098a5076557e327b326a1a3ba3b5fb4fec1e49",
+        "type": "github"
+      },
+      "original": {
+        "owner": "haskell-wasm",
+        "repo": "ghc-wasm-meta",
+        "type": "github"
+      }
+    },
+    "nix-wasm": {
+      "inputs": {
+        "flake-compat": "flake-compat",
+        "ghc-wasm-meta": "ghc-wasm-meta",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "host": "gitlab.haskell.org",
-        "lastModified": 1782746743,
-        "narHash": "sha256-FVvQF63YXYpsCc3beWH74tqlM4tOtfKK0aWr0EbPwjA=",
-        "owner": "ghc",
-        "repo": "ghc-wasm-meta",
-        "rev": "ddd32a2301e8622c656e844210c8994cb46e14da",
-        "type": "gitlab"
+        "lastModified": 1775735215,
+        "narHash": "sha256-5zl0poxf/JRDWVWEVmmNGgNTyMB4T94JGqC5SP5aiUE=",
+        "owner": "ners",
+        "repo": "nix-wasm",
+        "rev": "826a4c41fc0e553490a710c145d362d6d9f0ef03",
+        "type": "github"
       },
       "original": {
-        "host": "gitlab.haskell.org",
-        "owner": "ghc",
-        "repo": "ghc-wasm-meta",
-        "type": "gitlab"
+        "owner": "ners",
+        "repo": "nix-wasm",
+        "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1781472460,
-        "narHash": "sha256-dqwpb1o0xIwb1rv3PPbpY7RBm8heFiOLAubszNLBefc=",
+        "lastModified": 1775423009,
+        "narHash": "sha256-vPKLpjhIVWdDrfiUM8atW6YkIggCEKdSAlJPzzhkQlw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8c14fa3ccacddaec887134e523083b63c8ea57ac",
+        "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixpkgs-26.05-darwin",
         "repo": "nixpkgs",
+        "rev": "68d8aa3d661f0e6bd5862291b5bb263b2a6595c9",
         "type": "github"
       }
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1783224372,
-        "narHash": "sha256-8i/87eeoqiGE4yOTjwSA3Eh/ziJRQEmd/unYU+K27sk=",
+        "lastModified": 1786384358,
+        "narHash": "sha256-RzPPiWeUtuvymnpuEWsdtzli5w4kjZs49FqEs3/1u+I=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+        "rev": "2fcb964de67fcf60b43471c55d5d99e61a9ccb5a",
         "type": "github"
       },
       "original": {
@@ -71,10 +107,28 @@
         "type": "github"
       }
     },
+    "obelisk": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774074673,
+        "narHash": "sha256-RtO4QnLiqAepYlcU6SBBKYpA0RpmVIMrVLplJGCdII0=",
+        "owner": "obsidiansystems",
+        "repo": "obelisk",
+        "rev": "b0b16ee72b90517d0ee90e5ea670ed76345dde57",
+        "type": "github"
+      },
+      "original": {
+        "owner": "obsidiansystems",
+        "repo": "obelisk",
+        "rev": "b0b16ee72b90517d0ee90e5ea670ed76345dde57",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
-        "ghc-wasm-meta": "ghc-wasm-meta",
-        "nixpkgs": "nixpkgs_2"
+        "nix-wasm": "nix-wasm",
+        "nixpkgs": "nixpkgs_2",
+        "obelisk": "obelisk"
       }
     },
     "systems": {
