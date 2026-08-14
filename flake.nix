@@ -125,12 +125,12 @@
         (pkgs.androidenv.composeAndroidPackages {
           platformVersions = [ "34" ];
           buildToolsVersions = [ "34.0.0" ];
-          }).androidsdk;
+        }).androidsdk;
       androidSdkRoot = "${androidSdk}/libexec/android-sdk";
 
     in
-    {
-      packages.${system} = rec {
+    let
+      systemPackages = rec {
         diverkStatic = pkgs.stdenv.mkDerivation {
           name = "diverk-static";
           src = ./.;
@@ -165,7 +165,68 @@
           name = "diverk";
           paths = [ diverk-wasm diverkStatic ];
         };
+
+        android-debug-apk = pkgs.stdenv.mkDerivation {
+          pname = "diverk-android";
+          version = "1.0";
+          src = ./mobile;
+          nativeBuildInputs = [ pkgs.gradle pkgs.nodejs pkgs.jdk17 androidSdk ];
+          ANDROID_SDK_ROOT = androidSdkRoot;
+          ANDROID_HOME = androidSdkRoot;
+          JAVA_HOME = "${pkgs.jdk17.home}";
+          GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/34.0.0/aapt2";
+
+          mitmCache = android-gradle-deps;
+
+          # nixDownloadDeps hits variant-ambiguity on Android subproject test
+          # configurations; assembleDebug resolves the same Maven artifacts
+          # without touching test configs and is what the actual build does anyway.
+          gradleUpdateTask = "assembleDebug";
+
+          configurePhase = ''
+            runHook preConfigure
+            export GRADLE_OPTS="$GRADLE_OPTS -Dorg.gradle.native.dir=$TMPDIR/gradle-native"
+            export ANDROID_USER_HOME="$TMPDIR/android-user-home"
+            mkdir -p "$ANDROID_USER_HOME"
+            rm -rf android/app/src/main/assets/public \
+                   android/capacitor-cordova-android-plugins \
+                   android/capacitor.settings.gradle
+            ln -s ${diverk-mobile-deps}/node_modules node_modules
+            mkdir -p ../frontend
+            cp -rL --no-preserve=mode ${default} ../frontend/dist
+            npm run copy
+            runHook postConfigure
+          '';
+
+          preBuild = "cd android";
+
+          buildPhase = ''
+            runHook preBuild
+            gradle assembleDebug
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            mkdir -p $out
+            cp build/android/app/outputs/apk/debug/app-debug.apk $out/
+            runHook postInstall
+          '';
+        };
       };
+      # Single MITM cache derivation: records Gradle/Maven HTTP traffic when
+      # `update-android-deps` runs (record mode), then replays it in the nix
+      # sandbox during `nix build .#android-debug-apk` (replay mode).
+      # useBwrap = false: bwrap's --clearenv drops /etc, breaking cap sync's
+      # os.userInfo() call inside the update script.
+      android-gradle-deps = pkgs.gradle.fetchDeps {
+        pkg = systemPackages.android-debug-apk;
+        data = ./mobile/deps.json;
+        useBwrap = false;
+      };
+    in
+    {
+      packages.${system} = systemPackages;
 
       devShells.${system} = {
         # `nix develop` — WASM + Android build shell.
@@ -188,6 +249,8 @@
             pkgs.jdk17
             androidSdk
             pkgs.gradle
+            (pkgs.writeShellScriptBin "update-android-deps"
+              "exec ${android-gradle-deps.updateScript}")
           ];
 
           ANDROID_SDK_ROOT = androidSdkRoot;
