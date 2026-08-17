@@ -166,6 +166,7 @@
           paths = [ diverk-wasm diverkStatic ];
         };
 
+        # Upload to Google Play Store.
         android-release-aab = pkgs.stdenv.mkDerivation {
           pname = "diverk-android";
           version = "1.0";
@@ -213,10 +214,11 @@
             runHook postInstall
           '';
         };
+
       };
       # Single MITM cache derivation: records Gradle/Maven HTTP traffic when
       # `update-android-deps` runs (record mode), then replays it in the nix
-      # sandbox during `nix build .#android-release-aab` (replay mode).
+      # sandbox during `nix build .#android-release-apk` (replay mode).
       # useBwrap = false: bwrap's --clearenv drops /etc, breaking cap sync's
       # os.userInfo() call inside the update script.
       android-gradle-deps = pkgs.gradle.fetchDeps {
