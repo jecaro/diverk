@@ -1,6 +1,21 @@
 import { WASI, OpenFile, File, ConsoleStdout } from "@bjorn3/browser_wasi_shim";
 import ghc_wasm_jsffi from "./ghc_wasm_jsffi.js";
 
+// Obelisk's MkHome handler redirects / → /repo via pushState, which adds a
+// spurious history entry and breaks webView.canGoBack(). Intercept that one
+// push and convert it to replaceState so history starts clean at /repo.
+{
+  const origPush = history.pushState.bind(history);
+  history.pushState = function(state, title, url) {
+    history.pushState = origPush;
+    if (window.location.pathname === '/') {
+      history.replaceState(state, title, url);
+    } else {
+      origPush(state, title, url);
+    }
+  };
+}
+
 const args = [];
 const env = ["GHCRTS=-H64m"];
 const fds = [
