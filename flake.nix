@@ -166,7 +166,7 @@
           paths = [ diverk-wasm diverkStatic ];
         };
 
-        android-debug-apk = pkgs.stdenv.mkDerivation {
+        android-release-aab = pkgs.stdenv.mkDerivation {
           pname = "diverk-android";
           version = "1.0";
           src = ./mobile;
@@ -179,9 +179,9 @@
           mitmCache = android-gradle-deps;
 
           # nixDownloadDeps hits variant-ambiguity on Android subproject test
-          # configurations; assembleDebug resolves the same Maven artifacts
+          # configurations; assembleRelease resolves the same Maven artifacts
           # without touching test configs and is what the actual build does anyway.
-          gradleUpdateTask = "assembleDebug";
+          gradleUpdateTask = "bundleRelease";
 
           configurePhase = ''
             runHook preConfigure
@@ -202,25 +202,25 @@
 
           buildPhase = ''
             runHook preBuild
-            gradle assembleDebug
+            gradle bundleRelease
             runHook postBuild
           '';
 
           installPhase = ''
             runHook preInstall
             mkdir -p $out
-            cp build/android/app/outputs/apk/debug/app-debug.apk $out/
+            cp build/android/app/outputs/bundle/release/app-release.aab $out/
             runHook postInstall
           '';
         };
       };
       # Single MITM cache derivation: records Gradle/Maven HTTP traffic when
       # `update-android-deps` runs (record mode), then replays it in the nix
-      # sandbox during `nix build .#android-debug-apk` (replay mode).
+      # sandbox during `nix build .#android-release-aab` (replay mode).
       # useBwrap = false: bwrap's --clearenv drops /etc, breaking cap sync's
       # os.userInfo() call inside the update script.
       android-gradle-deps = pkgs.gradle.fetchDeps {
-        pkg = systemPackages.android-debug-apk;
+        pkg = systemPackages.android-release-aab;
         data = ./mobile/deps.json;
         useBwrap = false;
       };

@@ -3,6 +3,7 @@
 .attr-cache
 .cabal-sandbox
 /android-app-release.aab
+/app-release.aab
 /frontend/node_modules
 /mobile/node_modules
 /scratch
