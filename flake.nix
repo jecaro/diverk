@@ -249,6 +249,7 @@
             pkgs.jdk17
             androidSdk
             pkgs.gradle
+            pkgs.bundletool
             (pkgs.writeShellScriptBin "update-android-deps"
               "exec ${android-gradle-deps.updateScript}")
           ];
