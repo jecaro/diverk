@@ -8,6 +8,9 @@ npm run copy
 cd android
 if [ "${1:-}" = "release" ]; then
     gradle assembleRelease --no-daemon
-else
+elif [ "${1:-}" = "debug" ]; then
     gradle assembleDebug --no-daemon
+else
+    echo "Usage: build.sh [debug|release]" >&2
+    exit 1
 fi

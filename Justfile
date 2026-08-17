@@ -16,8 +16,8 @@ prod: css wasm-prod
 run: all
     node serve.mjs
 
-android: all
-    cd mobile && ./build.sh
+android-debug: all
+    cd mobile && ./build.sh debug
 
 android-release: all
     cd mobile && ./build.sh release
