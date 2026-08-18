@@ -3,15 +3,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     nix-wasm.url = "github:ners/nix-wasm";
-
-    obelisk = {
-      url = "github:obsidiansystems/obelisk/b0b16ee72b90517d0ee90e5ea670ed76345dde57";
-      flake = false;
-    };
   };
 
   outputs =
-    { self, nixpkgs, nix-wasm, obelisk }:
+    { self, nixpkgs, nix-wasm }:
     let
       system = "x86_64-linux";
 
@@ -33,18 +28,8 @@
       # lifting for those packages.
       wasmPkgs = nix-wasm.legacyPackages.${system};
 
-      obeliskSrc = obelisk;
-
       wasmHaskellPkgs = wasmPkgs.haskell.packages.ghc914.extend (
         hfinal: hprev: {
-          obelisk-route = hfinal.callCabal2nix "obelisk-route" "${obeliskSrc}/lib/route" { };
-
-          tabulation = hfinal.callCabal2nix "tabulation" "${obeliskSrc}/lib/tabulation" { };
-
-          obelisk-executable-config-lookup = hfinal.callCabal2nix "obelisk-executable-config-lookup"
-            "${obeliskSrc}/lib/executable-config/lookup"
-            { };
-
           # parser-regex-0.3.0.0 bounds ghc-bignum < 1.4 but GHC 9.14 ships 1.4.
           # jsaddle-0.9.9.3 bounds time < 1.15 but GHC 9.14 ships 1.15.
           # jailbreak-cabal can't strip these because they're inside conditional
@@ -84,8 +69,6 @@
                 --replace-fail 'ghc-experimental ^>=0.1 || >=9.1000 && <9.1300' 'ghc-experimental >= 0.1'
             '';
           });
-
-          common = hfinal.callCabal2nix "common" ./common { };
 
           frontend = hfinal.callCabal2nix "frontend" ./frontend { };
         }
@@ -232,12 +215,12 @@
       devShells.${system} = {
         # `nix develop` — WASM + Android build shell.
         # shellFor pre-populates GHC_PACKAGE_PATH with WASM-compiled packages
-        # so wasm32-wasi-cabal only needs to compile common/ and frontend/.
+        # so wasm32-wasi-cabal only needs to compile frontend/.
         default = pkgs.mkShell {
           name = "diverk";
           inputsFrom = [
             (wasmHaskellPkgs.shellFor {
-              packages = ps: [ ps.frontend ps.common ];
+              packages = ps: [ ps.frontend ];
               nativeBuildInputs = [ wasmToolchain ];
             })
           ];

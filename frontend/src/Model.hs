@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Common.Model
+module Model
   ( Owner (..),
     Repo (..),
     Token (..),

@@ -10,6 +10,6 @@ cd "$(dirname "$0")"
 
 wasm32-wasi-cabal build exe:frontend
 
-hs_wasm=$(find ../dist-newstyle -name 'frontend.wasm' -print0 | xargs -0 ls -t 2>/dev/null | head -1)
+hs_wasm=$(find ./dist-newstyle -name 'frontend.wasm' -print0 | xargs -0 ls -t 2>/dev/null | head -1)
 
 bash assemble.sh "$hs_wasm" "$@"

@@ -1,19 +1,11 @@
-module Widget (card, error, spinner, link) where
+module Widget (card, error, link, spinner) where
 
-import Common.Route (FrontendRoute (..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import Obelisk.Route (R)
-import Obelisk.Route.Frontend
-  ( RouteToUrl,
-    Routed,
-    SetRoute,
-    askRoute,
-    routeLinkDynAttr,
-  )
 import Reflex.Dom.Core hiding (link)
 import qualified Widget.Icon as Icon
 import Prelude hiding (error)
+
 
 spinner :: DomBuilder t m => m ()
 spinner =
@@ -43,18 +35,10 @@ spinner =
       )
       blank
 
-error ::
-  ( RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m,
-    DomBuilder t m,
-    Prerender t m,
-    Routed t (R FrontendRoute) m,
-    PostBuild t m
-  ) =>
-  Text ->
-  m ()
-error msg = do
-  route <- askRoute
+-- "try again" navigates to the current URL (href="") which reloads the page,
+-- re-fetching data fresh without requiring any routing machinery here.
+error :: DomBuilder t m => Text -> m ()
+error msg =
   elClass "div" "p-4" $
     elClass "div" (T.unwords ["alert", "alert-error", "shadow-lg"]) $
       do
@@ -64,7 +48,7 @@ error msg = do
             elClass "h3" "font-bold" $ text "An error occurred "
             elClass "div" "text-xs" $ text msg
         el "div" $
-          routeLinkDynAttr (constDyn $ "class" =: "link") route $
+          elAttr "a" ("class" =: "link" <> "href" =: "") $
             text "try again"
 
 card :: DomBuilder t m => m a -> m a
@@ -89,3 +73,4 @@ card =
 
 link :: DomBuilder t m => Text -> m () -> m ()
 link url = elAttr "a" ("class" =: "link" <> "href" =: url)
+

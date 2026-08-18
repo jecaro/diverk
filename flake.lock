@@ -107,28 +107,10 @@
         "type": "github"
       }
     },
-    "obelisk": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1774074673,
-        "narHash": "sha256-RtO4QnLiqAepYlcU6SBBKYpA0RpmVIMrVLplJGCdII0=",
-        "owner": "obsidiansystems",
-        "repo": "obelisk",
-        "rev": "b0b16ee72b90517d0ee90e5ea670ed76345dde57",
-        "type": "github"
-      },
-      "original": {
-        "owner": "obsidiansystems",
-        "repo": "obelisk",
-        "rev": "b0b16ee72b90517d0ee90e5ea670ed76345dde57",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "nix-wasm": "nix-wasm",
-        "nixpkgs": "nixpkgs_2",
-        "obelisk": "obelisk"
+        "nixpkgs": "nixpkgs_2"
       }
     },
     "systems": {

@@ -2,21 +2,19 @@
 
 module Frontend (frontendHead, frontendBody) where
 
-import Common.Model (Config (..), darkMode)
-import Common.Route (FrontendRoute (..))
 import Control.Lens (preview, to, _Just)
 import Control.Monad (void)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (isJust)
 import LocalStorage (load, save)
-import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute (..), askRoute)
+import Model (Config (..), darkMode)
+import Route (AskRoute (..), Nav (..), Route (..), RouteToUrl, SetRoute (..))
 import qualified Page.About as About
 import qualified Page.Browse as Browse
 import qualified Page.Search as Search
 import qualified Page.Settings as Settings
-import Reflex.Dom.Core
+import Reflex.Dom.Core hiding (Home, Search)
 import Theme (setDarkModeOn)
 import Witherable (catMaybes)
 
@@ -56,20 +54,20 @@ frontendBody ::
   forall t m.
   ( DomBuilder t m,
     Prerender t m,
-    Routed t (R FrontendRoute) m,
     MonadFix m,
     MonadHold t m,
     PostBuild t m,
-    SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m,
     PerformEvent t m,
     TriggerEvent t m,
-    MonadIO (Performable m)
+    MonadIO (Performable m),
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
   ) =>
   m ()
 frontendBody = do
-  evSettingsLoaded <- fmap MkConfigLoaded <$> load
   dyRoute <- askRoute
+  evSettingsLoaded <- fmap MkConfigLoaded <$> load
 
   rec dyState <- holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
       let dyDarkModeOnRouteChange = getDarkMode <$> dyState <* dyRoute
@@ -87,39 +85,39 @@ frontendBody = do
 route ::
   ( DomBuilder t m,
     Prerender t m,
-    SetRoute t (R FrontendRoute) m,
     PostBuild t m,
     MonadHold t m,
     MonadFix m,
-    RouteToUrl (R FrontendRoute) m,
     PerformEvent t m,
     TriggerEvent t m,
     MonadIO (Performable m),
-    Routed t (R FrontendRoute) m
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
   ) =>
-  R FrontendRoute ->
+  Route ->
   State ->
   m (Event t State)
-route (MkSettings :/ ()) (MkConfigLoaded mbConfig) = do
+route Settings (MkConfigLoaded mbConfig) = do
   evOk <- Settings.page mbConfig
   evSaved <- save evOk
-  setRoute $ MkBrowse :/ [] <$ evSaved
+  setRoute $ Push (Browse []) <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
-route (MkBrowse :/ path) (MkConfigLoaded (Just config)) = do
+route (Browse path) (MkConfigLoaded (Just config)) = do
   Browse.page config path
   pure never
-route
-  (MkSearch :/ keywords)
-  (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
-    Search.page owner repo token keywords
-    pure never
-route (MkHome :/ ()) (MkConfigLoaded (Just _)) = do
-  setRoute . (MkBrowse :/ [] <$) =<< getPostBuild
+route (Search keywords) (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
+  Search.page owner repo token keywords
+  pure never
+route Home (MkConfigLoaded (Just _)) = do
+  ev <- getPostBuild
+  setRoute $ Replace (Browse []) <$ ev
   pure never
 route _ (MkConfigLoaded Nothing) = do
-  setRoute . (MkSettings :/ () <$) =<< getPostBuild
+  ev <- getPostBuild
+  setRoute $ Replace Settings <$ ev
   pure never
-route (MkAbout :/ ()) (MkConfigLoaded mbConfig) = do
+route About (MkConfigLoaded mbConfig) = do
   About.page hasToken
   pure never
   where

@@ -27,7 +27,7 @@ android-release: prod
 
 clean:
     # cabal build artifacts
-    rm -rf dist-newstyle
+    rm -rf frontend/dist-newstyle
     # assembled web app (wasm + bundled js + html + css)
     rm -rf frontend/dist
     # compiled css

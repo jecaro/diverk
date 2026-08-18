@@ -1,7 +1,6 @@
 module Page.Browse (page) where
 
-import Common.Model (Config (..), Path (..))
-import Common.Route (FrontendRoute (..))
+import Model (Config (..), Path (..))
 import qualified Commonmark as CM
 import Control.Lens (preview, to, toListOf, (^.), (^?), _last)
 import Control.Monad (forM_)
@@ -23,8 +22,7 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Element (setInnerHTML)
 import qualified JSDOM.Element as JSDOM
 import JSDOM.Types (liftJSM)
-import Obelisk.Route (R, pattern (:/))
-import Obelisk.Route.Frontend (RouteToUrl, Routed, SetRoute, routeLink)
+import Route (AskRoute, Route (..), RouteToUrl, SetRoute, routeLink)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import qualified Request
@@ -117,9 +115,9 @@ page ::
     Prerender t m,
     MonadHold t m,
     MonadFix m,
-    SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m,
-    Routed t (R FrontendRoute) m
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
   ) =>
   Config ->
   [Text] ->
@@ -142,20 +140,18 @@ page MkConfig {..} path = do
         contentWidget state
 
 contentWidget ::
-  ( SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m,
-    DomBuilder t m,
-    Prerender t m
+  ( DomBuilder t m,
+    Prerender t m,
+    SetRoute t m,
+    RouteToUrl m
   ) =>
   State ->
   m ()
 contentWidget (StDirectory pathsToFiles) =
   forM_ pathsToFiles $ \(MkPath pathToFile) ->
     el "div" $
-      routeLink (MkBrowse :/ pathToFile)
-        . text
-        . fromMaybe "/"
-        $ pathToFile ^? _last
+      routeLink (Browse pathToFile) $
+        text . fromMaybe "/" $ pathToFile ^? _last
 contentWidget (StMarkdown html) =
   prerender_ blank $ do
     (e, _) <- elClass' "article" "prose" blank
@@ -168,12 +164,11 @@ contentWidget (StOther code) =
 contentWidget _ = Widget.spinner
 
 navbar' ::
-  ( RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m,
-    DomBuilder t m,
-    Prerender t m,
-    Routed t (R FrontendRoute) m,
-    PostBuild t m
+  ( DomBuilder t m,
+    PostBuild t m,
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
   ) =>
   [Text] ->
   Bool ->
@@ -185,8 +180,9 @@ navbar' path hasToken =
     Navbar.menu hasToken
   where
     liIntermediatePath intermediatePath =
-      el "li" . routeLink (MkBrowse :/ intermediatePath) $
-        homeOrText intermediatePath
+      el "li" $
+        routeLink (Browse intermediatePath) $
+          homeOrText intermediatePath
     homeOrText [] = Icon.house
     homeOrText [x] = text x
     homeOrText (_ : xs) = homeOrText xs

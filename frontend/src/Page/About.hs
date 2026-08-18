@@ -1,17 +1,12 @@
 module Page.About (page) where
 
-import Common.Route (FrontendRoute)
-import Obelisk.Route.Frontend (R, Routed, SetRoute)
+import Route (AskRoute, SetRoute)
 import Reflex.Dom.Core
 import qualified Widget
 import qualified Widget.Navbar as Navbar
 
 page ::
-  ( DomBuilder t m,
-    SetRoute t (R FrontendRoute) m,
-    Routed t (R FrontendRoute) m,
-    PostBuild t m
-  ) =>
+  (DomBuilder t m, PostBuild t m, SetRoute t m, AskRoute t m) =>
   Bool ->
   m ()
 page enableSearch = do
@@ -25,3 +20,4 @@ page enableSearch = do
         text "A minimalist GitHub repository browser"
       el "div" . Widget.link "https://github.com/jecaro/diverk" $
         text "Learn more"
+

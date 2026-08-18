@@ -2,7 +2,7 @@
 
 module Page.Settings (page) where
 
-import Common.Model
+import Model
   ( Config (..),
     Owner (..),
     Repo (..),

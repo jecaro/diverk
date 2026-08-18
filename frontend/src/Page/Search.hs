@@ -2,8 +2,7 @@
 
 module Page.Search (page) where
 
-import Common.Model (Owner, Path (..), Repo, Token)
-import Common.Route (FrontendRoute (MkBrowse, MkSearch))
+import Model (Owner, Path (..), Repo, Token)
 import Control.Arrow ((***))
 import Control.Lens (to, toListOf, (^.), _Unwrapped)
 import Control.Monad (join, when)
@@ -17,17 +16,8 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Generated.HTMLElement (focus)
 import qualified JSDOM.HTMLInputElement as JSDOM
 import JSDOM.Types (liftJSM)
-import Obelisk.Route.Frontend
-  ( R,
-    RouteToUrl,
-    Routed,
-    SetRoute,
-    dynRouteLink,
-    routeLink,
-    setRoute,
-    pattern (:/),
-  )
-import Reflex.Dom.Core
+import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute (..), routeLink)
+import Reflex.Dom.Core hiding (Search)
 import Reflex.Extra (onClient)
 import qualified Request
 import qualified Widget
@@ -90,10 +80,10 @@ page ::
     PostBuild t m,
     Prerender t m,
     MonadHold t m,
-    SetRoute t (R FrontendRoute) m,
-    RouteToUrl (R FrontendRoute) m,
     MonadFix m,
-    Routed t (R FrontendRoute) m
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
   ) =>
   Owner ->
   Repo ->
@@ -124,13 +114,13 @@ page owner repo token keywords = do
     request = Request.search token owner repo keywords
     elPath (MkPath pieces) =
       el "div" $
-        routeLink (MkBrowse :/ pieces) . text $ T.intercalate "/" pieces
+        routeLink (Browse pieces) $
+          text $ T.intercalate "/" pieces
 
 searchInput ::
-  ( SetRoute t (R FrontendRoute) m,
-    PostBuild t m,
+  ( DomBuilder t m,
     Prerender t m,
-    DomBuilder t m
+    SetRoute t m
   ) =>
   [Text] ->
   m (Dynamic t [Text])
@@ -149,7 +139,7 @@ searchInput keywords = elClass "form-control" "flex-1" $ do
           evEnterOnNonEmptyKeywords =
             ffilter (not . null) . tagPromptlyDyn dyKeywords $ keypress Enter ie
       pure (dyKeywords, evEnterOnNonEmptyKeywords)
-  setRoute $ (MkSearch :/) <$> evEnterOnNonEmptyKeywords
+  setRoute $ Push . Search <$> evEnterOnNonEmptyKeywords
   pure dyKeywords
   where
     inputElement' =
@@ -168,24 +158,23 @@ searchInput keywords = elClass "form-control" "flex-1" $ do
       JSDOM.HTMLInputElement . GHCJSDOM.unHTMLInputElement . _inputElement_raw
 
 searchButton ::
-  ( RouteToUrl (R FrontendRoute) m,
-    SetRoute t (R FrontendRoute) m,
+  ( DomBuilder t m,
     PostBuild t m,
-    Prerender t m,
-    DomBuilder t m
+    SetRoute t m
   ) =>
   Dynamic t [Text] ->
   m ()
 searchButton dyKeywords =
   elClass "label" "btn btn-ghost btn-circle" $
     dyn_ . ffor dyHasKeyWords $ \case
-      True -> dynRouteLink (searchRoute <$> dyKeywords) searchIcon
+      True -> do
+        (e, _) <- elDynClass' "span" (iconClasses <$> dyHasKeyWords) blank
+        setRoute $ Push . Search <$> tagPromptlyDyn dyKeywords (domEvent Click e)
       False -> searchIcon
   where
     dyHasKeyWords = not . null <$> dyKeywords
     searchIcon = elDynClass "span" (iconClasses <$> dyHasKeyWords) blank
-    iconClasses =
-      T.unwords . mappend [Icon.solid, Icon.searchName] . pure . opacity
+    iconClasses hasKw =
+      T.unwords . mappend [Icon.solid, Icon.searchName] . pure $ opacity hasKw
     opacity True = mempty
     opacity False = "opacity-50"
-    searchRoute = (MkSearch :/)

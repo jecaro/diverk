@@ -1,6 +1,6 @@
 module LocalStorage (load, save) where
 
-import Common.Model
+import Model
   ( Config (..),
     Owner (..),
     Repo (..),

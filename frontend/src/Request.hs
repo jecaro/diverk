@@ -6,7 +6,7 @@ module Request
   )
 where
 
-import Common.Model (Owner, Repo, Token)
+import Model (Owner, Repo, Token)
 import Control.Lens ((<>~), (^.), _Wrapped)
 import Data.Map (Map)
 import Data.Text (Text)
