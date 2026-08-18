@@ -31,7 +31,7 @@ where
 import Control.Lens ((%~))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT, ask, asks, runReaderT)
+import Control.Monad.Trans.Reader (ReaderT, asks, runReaderT)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as T

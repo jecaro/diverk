@@ -36,7 +36,7 @@ getSystemDarkMode = currentWindowUnchecked >>= flip matchMedia query >>= getMatc
     query = "(prefers-color-scheme: dark)"
 
 getSystemDarkModeEvent ::
-  forall m t. (Prerender t m, Monad m, MonadHold t m) => m (Event t Bool)
+  forall m t. (Prerender t m, MonadHold t m) => m (Event t Bool)
 getSystemDarkModeEvent = do
   dyDarkMode <- prerender (pure False) . liftJSM $ getSystemDarkMode
   -- Return only the first event, we're only interested in the initial value
