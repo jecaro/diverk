@@ -6,12 +6,12 @@ module Request
   )
 where
 
-import Model (Owner, Repo, Token)
 import Control.Lens ((<>~), (^.), _Wrapped)
 import Data.Map (Map)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Model (Owner, Repo, Token)
 import Network.HTTP.Types.URI (renderSimpleQuery)
 import Reflex.Dom.Core
 

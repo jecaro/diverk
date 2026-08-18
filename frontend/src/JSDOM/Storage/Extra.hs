@@ -24,7 +24,7 @@ import Language.Javascript.JSaddle
 getLocalStorageUnchecked :: JSM Storage
 getLocalStorageUnchecked = currentWindowUnchecked >>= getLocalStorage
 
-save :: ToJSVal a => Text -> a -> JSM ()
+save :: (ToJSVal a) => Text -> a -> JSM ()
 save key val = do
   ls <- getLocalStorageUnchecked
   setItem ls key =<< valToJSON val
@@ -46,7 +46,7 @@ safeParseJSON json = call (eval script) global [json]
       }
       )|]
 
-load :: FromJSVal a => Text -> JSM (Maybe a)
+load :: (FromJSVal a) => Text -> JSM (Maybe a)
 load key =
   runMaybeT $ do
     jsString <- MaybeT $ flip getItem key =<< getLocalStorageUnchecked

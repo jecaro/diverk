@@ -1,5 +1,11 @@
 module LocalStorage (load, save) where
 
+import Control.Lens ((^.), _Wrapped)
+import Data.Functor (($>))
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
+import qualified JSDOM.Storage.Extra as JSDOM
+import Language.Javascript.JSaddle (liftJSM)
 import Model
   ( Config (..),
     Owner (..),
@@ -10,12 +16,6 @@ import Model
     repo,
     token,
   )
-import Control.Lens ((^.), _Wrapped)
-import Data.Functor (($>))
-import Data.Maybe (fromMaybe)
-import Data.Text (Text)
-import qualified JSDOM.Storage.Extra as JSDOM
-import Language.Javascript.JSaddle (liftJSM)
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 
@@ -38,7 +38,10 @@ load =
                 darkMode' <- fromMaybe False <$> JSDOM.load darkModeTag
                 pure $
                   MkConfig
-                    <$> mbOwner <*> mbRepo <*> pure mbToken <*> pure darkMode'
+                    <$> mbOwner
+                    <*> mbRepo
+                    <*> pure mbToken
+                    <*> pure darkMode'
             )
       )
 

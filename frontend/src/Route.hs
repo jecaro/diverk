@@ -75,14 +75,14 @@ renderRoute (Search kws) = "/search/" <> T.intercalate "/" kws
 renderRoute About = "/about"
 
 data RouteEnv t = RouteEnv
-  { reDyRoute :: Dynamic t Route
-  , reRenderRoute :: Route -> Text
+  { reDyRoute :: Dynamic t Route,
+    reRenderRoute :: Route -> Text
   }
 
 class (Reflex t, Monad m) => SetRoute t m | m -> t where
   setRoute :: Event t Nav -> m ()
 
-class Monad m => RouteToUrl m where
+class (Monad m) => RouteToUrl m where
   askRouteToUrl :: m (Route -> Text)
 
 class (Reflex t, Monad m) => AskRoute t m | m -> t where
@@ -94,7 +94,7 @@ instance (Reflex t, Monad m) => SetRoute t (EventWriterT t [Nav] m) where
 instance (Reflex t, Monad m) => RouteToUrl (ReaderT (RouteEnv t) m) where
   askRouteToUrl = asks reRenderRoute
 
-instance RouteToUrl m => RouteToUrl (EventWriterT t w m) where
+instance (RouteToUrl m) => RouteToUrl (EventWriterT t w m) where
   askRouteToUrl = lift askRouteToUrl
 
 instance (Reflex t, Monad m) => AskRoute t (ReaderT (RouteEnv t) m) where
@@ -113,12 +113,13 @@ routeLink route inner = do
   toUrl <- askRouteToUrl
   let cfg =
         (def :: ElementConfig EventResult t (DomBuilderSpace m))
-          & elementConfig_initialAttributes .~ ("href" =: toUrl route)
+          & elementConfig_initialAttributes
+          .~ ("href" =: toUrl route)
           & elementConfig_eventSpec
-            %~ addEventSpecFlags
-              (Proxy :: Proxy (DomBuilderSpace m))
-              Click
-              (const preventDefault)
+          %~ addEventSpecFlags
+            (Proxy :: Proxy (DomBuilderSpace m))
+            Click
+            (const preventDefault)
   (aEl, result) <- element "a" cfg inner
   setRoute $ Push route <$ domEvent Click aEl
   pure result
@@ -149,9 +150,12 @@ runRouteViewT widget = do
   (_, evNavs) <- flip runReaderT (RouteEnv dyRoute renderRoute) $ runEventWriterT widget
   performEvent_ $ ffor evNavs $ \navs -> liftJSM $ do
     hist <- getHistory =<< currentWindowUnchecked
-    mapM_ (\nav -> do
-      let r = case nav of { Push r' -> r'; Replace r' -> r' }
-      case nav of
-        Push _    -> pushState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
-        Replace _ -> replaceState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
-      liftIO $ triggerNavRoute r) navs
+    mapM_
+      ( \nav -> do
+          let r = case nav of Push r' -> r'; Replace r' -> r'
+          case nav of
+            Push _ -> pushState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
+            Replace _ -> replaceState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
+          liftIO $ triggerNavRoute r
+      )
+      navs

@@ -2,6 +2,13 @@
 
 module Page.Settings (page) where
 
+import Control.Lens (to, (^.), (^?), _Just, _Wrapped)
+import Control.Monad (void, (<=<))
+import Control.Monad.Fix (MonadFix)
+import Control.Monad.IO.Class (MonadIO)
+import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Model
   ( Config (..),
     Owner (..),
@@ -12,13 +19,6 @@ import Model
     repo,
     token,
   )
-import Control.Lens (to, (^.), (^?), _Just, _Wrapped)
-import Control.Monad (void, (<=<))
-import Control.Monad.Fix (MonadFix)
-import Control.Monad.IO.Class (MonadIO)
-import Data.Maybe (fromMaybe, isJust, isNothing)
-import Data.Text (Text)
-import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Error)
 import Reflex.Extra (onClient)
 import qualified Request
@@ -67,7 +67,10 @@ page mbConfig =
         let evContentRequest =
               updated $
                 Request.contents
-                  <$> dyToken <*> dyOwner <*> dyRepo <*> pure mempty
+                  <$> dyToken
+                  <*> dyOwner
+                  <*> dyRepo
+                  <*> pure mempty
         evRepoResponse <- debounceAndRequest evContentRequest
         -- Same remark for 401
         dyRepoExists <-
@@ -107,7 +110,8 @@ page mbConfig =
 
     let beConfig =
           current $
-            MkConfig <$> dyOwner
+            MkConfig
+              <$> dyOwner
               <*> dyRepo
               <*> dyToken
               <*> dyDarkMode
@@ -158,10 +162,12 @@ page mbConfig =
           _inputElement_checked
             <$> inputElement
               ( def
-                  & inputElementConfig_initialChecked .~ darkModeFromConfig
-                  & inputElementConfig_setChecked .~ evSystemDarkModeWhenNotSet
+                  & inputElementConfig_initialChecked
+                  .~ darkModeFromConfig
+                  & inputElementConfig_setChecked
+                  .~ evSystemDarkModeWhenNotSet
                   & initialAttributes
-                    .~ ("class" =: "toggle" <> "type" =: "checkbox")
+                  .~ ("class" =: "toggle" <> "type" =: "checkbox")
               )
 
     saveButton dyEnable = do
@@ -219,17 +225,18 @@ inputWidget inputType label mandatory placeholder initialValue valid evValid mbH
             value
               <$> inputElement
                 ( def
-                    & inputElementConfig_initialValue .~ initialValue
+                    & inputElementConfig_initialValue
+                    .~ initialValue
                     & initialAttributes
-                      .~ ( "class" =: inputClasses' valid
-                             <> "type" =: toText inputType
-                             <> "placeholder" =: placeholder
-                             <> "id" =: inputId
-                         )
+                    .~ ( "class" =: inputClasses' valid
+                           <> "type" =: toText inputType
+                           <> "placeholder" =: placeholder
+                           <> "id" =: inputId
+                       )
                     & modifyAttributes
-                      .~ ( ((=:) "class" . Just . inputClasses' <$> evValid)
-                             <> (toggleInputType inputType <$> evPasswordVisible)
-                         )
+                    .~ ( ((=:) "class" . Just . inputClasses' <$> evValid)
+                           <> (toggleInputType inputType <$> evPasswordVisible)
+                       )
                 )
           evPasswordVisible <- elEye inputType
       pure dyInput

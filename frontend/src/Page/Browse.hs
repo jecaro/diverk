@@ -1,6 +1,5 @@
 module Page.Browse (page) where
 
-import Model (Config (..), Path (..))
 import qualified Commonmark as CM
 import Control.Lens (preview, to, toListOf, (^.), (^?), _last)
 import Control.Monad (forM_)
@@ -8,13 +7,13 @@ import Control.Monad.Fix (MonadFix)
 import qualified Data.Aeson as JSON
 import Data.Aeson.Lens (key, values, _String)
 import Data.Bifunctor (Bifunctor (first))
+import qualified Data.ByteString.Base64 as B64
 import Data.Either.Extra (maybeToEither)
 import Data.Foldable (traverse_)
 import Data.List (inits)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.ByteString.Base64 as B64
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException)
 import qualified Data.Text.Lazy as LT
@@ -22,10 +21,11 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Element (setInnerHTML)
 import qualified JSDOM.Element as JSDOM
 import JSDOM.Types (liftJSM)
-import Route (AskRoute, Route (..), RouteToUrl, SetRoute, routeLink)
+import Model (Config (..), Path (..))
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import qualified Request
+import Route (AskRoute, Route (..), RouteToUrl, SetRoute, routeLink)
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
@@ -151,7 +151,8 @@ contentWidget (StDirectory pathsToFiles) =
   forM_ pathsToFiles $ \(MkPath pathToFile) ->
     el "div" $
       routeLink (Browse pathToFile) $
-        text . fromMaybe "/" $ pathToFile ^? _last
+        text . fromMaybe "/" $
+          pathToFile ^? _last
 contentWidget (StMarkdown html) =
   prerender_ blank $ do
     (e, _) <- elClass' "article" "prose" blank
@@ -176,7 +177,8 @@ navbar' ::
 navbar' path hasToken =
   Navbar.widget $ do
     elClass "div" "breadcrumbs flex gap-x-4 w-full" $
-      el "ul" $ traverse_ liIntermediatePath (inits path)
+      el "ul" $
+        traverse_ liIntermediatePath (inits path)
     Navbar.menu hasToken
   where
     liIntermediatePath intermediatePath =

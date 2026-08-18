@@ -9,12 +9,12 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Maybe (isJust)
 import LocalStorage (load, save)
 import Model (Config (..), darkMode)
-import Route (AskRoute (..), Nav (..), Route (..), RouteToUrl, SetRoute (..))
 import qualified Page.About as About
 import qualified Page.Browse as Browse
 import qualified Page.Search as Search
 import qualified Page.Settings as Settings
 import Reflex.Dom.Core hiding (Home, Search)
+import Route (AskRoute (..), Nav (..), Route (..), RouteToUrl, SetRoute (..))
 import Theme (setDarkModeOn)
 import Witherable (catMaybes)
 
@@ -25,7 +25,7 @@ data State
     MkConfigLoaded (Maybe Config)
   deriving stock (Show, Eq)
 
-frontendHead :: DomBuilder t m => m ()
+frontendHead :: (DomBuilder t m) => m ()
 frontendHead = do
   el "title" $ text "Diverk"
   elAttr

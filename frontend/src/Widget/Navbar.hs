@@ -2,8 +2,8 @@ module Widget.Navbar (widget, menu, spacer) where
 
 import Control.Monad (void)
 import qualified Data.Text as T
-import Route (AskRoute (..), Nav (..), Route (..), SetRoute (..))
 import Reflex.Dom.Core hiding (Home, Search)
+import Route (AskRoute (..), Nav (..), Route (..), SetRoute (..))
 import qualified Widget.Icon as Icon
 
 widget :: (DomBuilder t m) => m () -> m ()
@@ -21,17 +21,18 @@ menu enableSearch = do
       elClass "div" (T.unwords [Icon.solid, Icon.kebabName]) blank
     elAttr
       "ul"
-      ( "tabindex" =: "0" <> "class"
-          =: T.unwords
-            [ "mt-3",
-              "p-2",
-              "shadow",
-              "menu",
-              "menu-compact",
-              "dropdown-content",
-              "rounded-box",
-              "bg-base-200"
-            ]
+      ( "tabindex" =: "0"
+          <> "class"
+            =: T.unwords
+              [ "mt-3",
+                "p-2",
+                "shadow",
+                "menu",
+                "menu-compact",
+                "dropdown-content",
+                "rounded-box",
+                "bg-base-200"
+              ]
       )
       $ do
         elMenuItem Icon.house (Browse []) "Browse" dyOnCurrent
@@ -62,5 +63,5 @@ menu enableSearch = do
     sameRoute About About = True
     sameRoute _ _ = False
 
-spacer :: DomBuilder t m => m ()
+spacer :: (DomBuilder t m) => m ()
 spacer = elClass "div" "flex-1" blank

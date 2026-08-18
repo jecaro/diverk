@@ -6,8 +6,7 @@ import Reflex.Dom.Core hiding (link)
 import qualified Widget.Icon as Icon
 import Prelude hiding (error)
 
-
-spinner :: DomBuilder t m => m ()
+spinner :: (DomBuilder t m) => m ()
 spinner =
   elClass
     "div"
@@ -37,7 +36,7 @@ spinner =
 
 -- "try again" navigates to the current URL (href="") which reloads the page,
 -- re-fetching data fresh without requiring any routing machinery here.
-error :: DomBuilder t m => Text -> m ()
+error :: (DomBuilder t m) => Text -> m ()
 error msg =
   elClass "div" "p-4" $
     elClass "div" (T.unwords ["alert", "alert-error", "shadow-lg"]) $
@@ -51,7 +50,7 @@ error msg =
           elAttr "a" ("class" =: "link" <> "href" =: "") $
             text "try again"
 
-card :: DomBuilder t m => m a -> m a
+card :: (DomBuilder t m) => m a -> m a
 card =
   elClass "div" "flex items-start md:h-full md:pt-[20vh]"
     . elClass
@@ -71,6 +70,5 @@ card =
           ]
       )
 
-link :: DomBuilder t m => Text -> m () -> m ()
+link :: (DomBuilder t m) => Text -> m () -> m ()
 link url = elAttr "a" ("class" =: "link" <> "href" =: url)
-

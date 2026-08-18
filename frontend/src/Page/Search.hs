@@ -2,7 +2,6 @@
 
 module Page.Search (page) where
 
-import Model (Owner, Path (..), Repo, Token)
 import Control.Arrow ((***))
 import Control.Lens (to, toListOf, (^.), _Unwrapped)
 import Control.Monad (join, when)
@@ -16,10 +15,11 @@ import qualified GHCJS.DOM.Types as GHCJSDOM
 import JSDOM.Generated.HTMLElement (focus)
 import qualified JSDOM.HTMLInputElement as JSDOM
 import JSDOM.Types (liftJSM)
-import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute (..), routeLink)
+import Model (Owner, Path (..), Repo, Token)
 import Reflex.Dom.Core hiding (Search)
 import Reflex.Extra (onClient)
 import qualified Request
+import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute (..), routeLink)
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
@@ -115,7 +115,8 @@ page owner repo token keywords = do
     elPath (MkPath pieces) =
       el "div" $
         routeLink (Browse pieces) $
-          text $ T.intercalate "/" pieces
+          text $
+            T.intercalate "/" pieces
 
 searchInput ::
   ( DomBuilder t m,

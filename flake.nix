@@ -231,7 +231,9 @@
             pkgs.esbuild
             pkgs.git
             pkgs.gradle
+            pkgs.haskellPackages.cabal-fmt
             pkgs.haskellPackages.ghcid
+            pkgs.haskellPackages.ormolu
             pkgs.jdk17
             pkgs.just
             pkgs.nodejs

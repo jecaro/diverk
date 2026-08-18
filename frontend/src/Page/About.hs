@@ -1,7 +1,7 @@
 module Page.About (page) where
 
-import Route (AskRoute, SetRoute)
 import Reflex.Dom.Core
+import Route (AskRoute, SetRoute)
 import qualified Widget
 import qualified Widget.Navbar as Navbar
 
@@ -20,4 +20,3 @@ page enableSearch = do
         text "A minimalist GitHub repository browser"
       el "div" . Widget.link "https://github.com/jecaro/diverk" $
         text "Learn more"
-
