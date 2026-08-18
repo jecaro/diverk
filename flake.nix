@@ -147,21 +147,17 @@
           nativeBuildInputs = [ wasmToolchain pkgs.nodejs pkgs.esbuild ];
           dontUnpack = true;
           buildPhase = ''
-            mkdir -p $out
             wasmBin=$(find ${wasmHaskellPkgs.frontend} -name '*.wasm' | head -1)
-            "$(wasm32-wasi-ghc --print-libdir)/post-link.mjs" \
-              --input "$wasmBin" --output $out/ghc_wasm_jsffi.js
-            env -i GHCRTS=-H64m wizer --allow-wasi --wasm-bulk-memory true \
-              --inherit-env true --init-func _initialize -o $out/bin.wasm "$wasmBin"
-            wasm-opt -Oz $out/bin.wasm -o $out/bin.wasm
-            wasm-tools strip -o $out/bin.wasm $out/bin.wasm
-            cp ${./frontend/index.html} $out/index.html
+            cp ${./frontend/index.html} index.html
             cp ${./frontend/index.js} index.js
+            cp ${./frontend/assemble.sh} assemble.sh
             ln -s ${diverk-frontend-deps}/node_modules node_modules
-            esbuild index.js --bundle --format=esm \
-              --external:./ghc_wasm_jsffi.js --outfile=$out/index.js
+            bash assemble.sh "$wasmBin" -Oz
           '';
-          dontInstall = true;
+          installPhase = ''
+            mkdir -p $out
+            cp -r dist/. $out/
+          '';
         };
 
         default = pkgs.symlinkJoin {
