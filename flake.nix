@@ -149,9 +149,12 @@
           buildPhase = ''
             mkdir -p $out
             wasmBin=$(find ${wasmHaskellPkgs.frontend} -name '*.wasm' | head -1)
-            cp "$wasmBin" $out/bin.wasm
             "$(wasm32-wasi-ghc --print-libdir)/post-link.mjs" \
-              --input $out/bin.wasm --output $out/ghc_wasm_jsffi.js
+              --input "$wasmBin" --output $out/ghc_wasm_jsffi.js
+            env -i GHCRTS=-H64m wizer --allow-wasi --wasm-bulk-memory true \
+              --inherit-env true --init-func _initialize -o $out/bin.wasm "$wasmBin"
+            wasm-opt -Oz $out/bin.wasm -o $out/bin.wasm
+            wasm-tools strip -o $out/bin.wasm $out/bin.wasm
             cp ${./frontend/index.html} $out/index.html
             cp ${./frontend/index.js} index.js
             ln -s ${diverk-frontend-deps}/node_modules node_modules
@@ -218,7 +221,7 @@
       };
       # Single MITM cache derivation: records Gradle/Maven HTTP traffic when
       # `update-android-deps` runs (record mode), then replays it in the nix
-      # sandbox during `nix build .#android-release-apk` (replay mode).
+      # sandbox during `nix build .#android-release-aab` (replay mode).
       # useBwrap = false: bwrap's --clearenv drops /etc, breaking cap sync's
       # os.userInfo() call inside the update script.
       android-gradle-deps = pkgs.gradle.fetchDeps {

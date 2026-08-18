@@ -16,16 +16,14 @@ prod: css wasm-prod
 run: all
     node serve.mjs
 
+# Debug builds are auto-signed by gradle and can be installed directly with adb.
 android-debug: all
     cd mobile && ./build.sh debug
 
-android-release: all
+# Release builds require mobile/android/keystore.properties to be set up.
+# See mobile/android/keystore.properties.example for the required fields.
+android-release: prod
     cd mobile && ./build.sh release
-    $ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner sign \
-      --ks ~/.android/debug.keystore \
-      --ks-key-alias androiddebugkey \
-      --ks-pass pass:android --key-pass pass:android \
-      mobile/android/build/android/app/outputs/apk/release/app-release-unsigned.apk
 
 clean:
     # cabal build artifacts

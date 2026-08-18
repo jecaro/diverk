@@ -1,8 +1,8 @@
 import { WASI, OpenFile, File, ConsoleStdout } from "@bjorn3/browser_wasi_shim";
 import ghc_wasm_jsffi from "./ghc_wasm_jsffi.js";
 
-// Obelisk's MkHome handler redirects / → /repo via pushState, which adds a
-// spurious history entry and breaks webView.canGoBack(). Intercept that one
+// The Reflex router redirects / → /repo via pushState on first load, which adds
+// a spurious history entry and breaks webView.canGoBack(). Intercept that one
 // push and convert it to replaceState so history starts clean at /repo.
 {
   const origPush = history.pushState.bind(history);
@@ -34,8 +34,7 @@ const options = { debug: false };
 const wasi = new WASI(args, env, fds, options);
 
 const instance_exports = {};
-const bytes = await (await fetch("bin.wasm")).arrayBuffer();
-const { instance } = await WebAssembly.instantiate(bytes, {
+const { instance } = await WebAssembly.instantiateStreaming(fetch("bin.wasm"), {
   wasi_snapshot_preview1: wasi.wasiImport,
   ghc_wasm_jsffi: ghc_wasm_jsffi(instance_exports),
 });
