@@ -9,7 +9,7 @@ Diverk is a simple app that allows you to browse a GitHub repository on your
 Android device. It renders markdown files and is thus mainly used to access 
 personal notes or documentation written in this format.
 
-It is available on [google play][play] and on the [web][web].
+It is available on [Google Play][play] and on the [web][web].
 
 It is able to access private repositories when given a valid access token. We 
 recommend using [fine-grained access tokens][tokens] for this purpose.
@@ -17,7 +17,7 @@ recommend using [fine-grained access tokens][tokens] for this purpose.
 Note that the app uses the GitHub API and is thus subject to rate limiting. 
 Without a token, the rate limit is 60 requests per hour. It roughly corresponds 
 to 60 pages per hour. It should be enough for quickly looking up something. But 
-for a more intensive use, we recommend using a token.
+for more intensive use, we recommend using a token.
 
 Using a token increases the rate limit to 5,000 requests per hour. More 
 information about rate limits is available in the [GitHub 
@@ -30,40 +30,56 @@ rate limit is 10 searches per hour.
 
 The app is written in Haskell with [Reflex][reflex] and compiled to
 WebAssembly using the [GHC WebAssembly backend][ghc-wasm]. It is a fully
-client-side single-page app — there is no backend. The toolchain
+client-side single-page app. There is no backend. The toolchain
 (`wasm32-wasi-ghc`, `wasm32-wasi-cabal`, `node`, ...) is provided by a Nix
 flake wrapping [ghc-wasm-meta][ghc-wasm-meta].
 
-Enter the development shell:
+### Dev workflow
+
+Enter the development shell, then build and serve:
 
 ```bash
 $ nix develop
+$ just run
 ```
 
-Build the CSS assets (Tailwind + FontAwesome), then compile the frontend to
-WebAssembly and assemble `frontend/dist/`:
+This builds the CSS (Tailwind + FontAwesome), compiles the frontend to
+WebAssembly, and starts a server at <http://localhost:8099>. On subsequent
+iterations, `just wasm` recompiles only the Haskell and skips the CSS step.
+
+### Nix build
 
 ```bash
-$ (cd static && ./build-css.sh)
-$ (cd frontend && ./build.sh)
+$ nix build
 ```
 
-Serve the result and open <http://localhost:8099>:
+Produces an optimised, self-contained web app in `result/`. From the `nix 
+develop` shell, serve it with:
 
 ```bash
-$ node serve.mjs
-```
-
-For a size-optimized production build (`wizer` + `wasm-opt` + strip):
-
-```bash
-$ (cd frontend && ./build.sh -Oz)
+$ node serve.mjs result
 ```
 
 ### Android
 
-Native Android packaging previously relied on Obelisk and is being reworked on
-top of the WebAssembly SPA (a WebView wrapper such as Capacitor, or a PWA).
+Set up `mobile/android/keystore.properties` (see
+`mobile/android/keystore.properties.example`) for release signing, then:
+
+```bash
+$ nix develop
+$ just android-debug    # debug APK, auto-signed, installable via adb
+$ just android-release  # release APK, requires keystore.properties
+```
+
+`just android-debug` outputs to
+`mobile/android/build/android/app/outputs/apk/debug/app-debug.apk`.
+Install with `adb install -r <path>`.
+
+To build a release AAB for the Play Store:
+
+```bash
+$ nix build .#android-release-aab
+```
 
 [ghc-wasm-meta]: https://gitlab.haskell.org/ghc/ghc-wasm-meta
 [ghc-wasm]: https://www.haskell.org/ghc/blog/20220222-wasm-backend-merged.html
