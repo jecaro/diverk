@@ -1,13 +1,13 @@
 default: all
 
 css:
-    cd static && ./build-css.sh
+    ./static/build-css.sh
 
 wasm:
-    cd frontend && ./build.sh
+    ./frontend/build.sh
 
 wasm-prod:
-    cd frontend && ./build.sh -Oz
+    ./frontend/build.sh -Oz
 
 all: css wasm
 
@@ -18,12 +18,12 @@ run: all
 
 # Debug builds are auto-signed by gradle and can be installed directly with adb.
 android-debug: all
-    cd mobile && ./build.sh debug
+    ./mobile/build.sh debug
 
 # Release builds require mobile/android/keystore.properties to be set up.
 # See mobile/android/keystore.properties.example for the required fields.
 android-release: prod
-    cd mobile && ./build.sh release
+    ./mobile/build.sh release
 
 clean:
     # cabal build artifacts
