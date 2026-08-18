@@ -226,14 +226,15 @@
           ];
 
           packages = [
-            pkgs.nodejs
-            pkgs.git
-            pkgs.just
-            pkgs.esbuild
-            pkgs.jdk17
             androidSdk
-            pkgs.gradle
             pkgs.bundletool
+            pkgs.esbuild
+            pkgs.git
+            pkgs.gradle
+            pkgs.haskellPackages.ghcid
+            pkgs.jdk17
+            pkgs.just
+            pkgs.nodejs
             (pkgs.writeShellScriptBin "update-android-deps"
               "exec ${android-gradle-deps.updateScript}")
           ];
