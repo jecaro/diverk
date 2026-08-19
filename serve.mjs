@@ -23,7 +23,33 @@ const types = {
   ".svg": "image/svg+xml",
 };
 
+const GITHUB_PREFIX = "/api/github/";
+
 createServer(async (req, res) => {
+  // Proxy /api/github/* → https://api.github.com/* to avoid browser CORS restrictions.
+  if (req.url.startsWith(GITHUB_PREFIX)) {
+    const rest = req.url.slice(GITHUB_PREFIX.length);
+    const target = "https://api.github.com/" + rest;
+    try {
+      const ghRes = await fetch(target, {
+        method: req.method,
+        headers: {
+          ...(req.headers.authorization && { authorization: req.headers.authorization }),
+          ...(req.headers.accept && { accept: req.headers.accept }),
+          ...(req.headers["user-agent"] && { "user-agent": req.headers["user-agent"] }),
+        },
+      });
+      res.statusCode = ghRes.status;
+      res.setHeader("Content-Type", ghRes.headers.get("content-type") ?? "application/json");
+      const buf = await ghRes.arrayBuffer();
+      res.end(Buffer.from(buf));
+    } catch (e) {
+      res.statusCode = 502;
+      res.end("proxy error: " + e.message);
+    }
+    return;
+  }
+
   try {
     let path = decodeURIComponent(new URL(req.url, "http://x").pathname);
     if (path === "/") path = "/index.html";

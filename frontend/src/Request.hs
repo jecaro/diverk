@@ -79,4 +79,4 @@ searchURL :: Text
 searchURL = githubBaseURL <> "/search/code"
 
 githubBaseURL :: Text
-githubBaseURL = "https://api.github.com"
+githubBaseURL = "/api/github"

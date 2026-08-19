@@ -3,7 +3,7 @@ module Widget (card, error, link, spinner) where
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (link)
-import Route (AskRoute (..), RouteToUrl, SetRoute (..), routeLink)
+import Route (AskRoute (..), Nav (..), RouteToUrl, SetRoute (..), navLink)
 import qualified Widget.Icon as Icon
 import Prelude hiding (error)
 
@@ -55,7 +55,7 @@ error msg = do
         el "div" $ do
           dyRoute <- askRoute
           dyn_ $ ffor dyRoute $ \route ->
-            routeLink route $ text "try again"
+            navLink (Replace route) $ text "try again"
 
 card :: (DomBuilder t m) => m a -> m a
 card =

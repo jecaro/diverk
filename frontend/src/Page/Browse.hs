@@ -25,7 +25,7 @@ import Model (Config (..), Path (..))
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import qualified Request
-import Route (AskRoute, Route (..), RouteToUrl, SetRoute, routeLink)
+import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute, navLink)
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
@@ -150,7 +150,7 @@ contentWidget ::
 contentWidget (StDirectory pathsToFiles) =
   forM_ pathsToFiles $ \(MkPath pathToFile) ->
     el "div" $
-      routeLink (Browse pathToFile) $
+      navLink (Push (Browse pathToFile)) $
         text . fromMaybe "/" $
           pathToFile ^? _last
 contentWidget (StMarkdown html) =
@@ -183,7 +183,7 @@ navbar' path hasToken =
   where
     liIntermediatePath intermediatePath =
       el "li" $
-        routeLink (Browse intermediatePath) $
+        navLink (Push (Browse intermediatePath)) $
           homeOrText intermediatePath
     homeOrText [] = Icon.house
     homeOrText [x] = text x

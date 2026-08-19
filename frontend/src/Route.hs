@@ -18,12 +18,13 @@
 module Route
   ( Route (..),
     Nav (..),
+    getRoute,
     parseRoute,
     renderRoute,
     SetRoute (..),
     RouteToUrl (..),
     AskRoute (..),
-    routeLink,
+    navLink,
     runRouteViewT,
   )
 where
@@ -56,6 +57,10 @@ data Nav
   = Push Route
   | Replace Route
   deriving stock (Eq, Show)
+
+getRoute :: Nav -> Route
+getRoute (Push r) = r
+getRoute (Replace r) = r
 
 parseRoute :: Text -> Route
 parseRoute path = case filter (not . T.null) (T.splitOn "/" path) of
@@ -103,15 +108,16 @@ instance (Reflex t, Monad m) => AskRoute t (ReaderT (RouteEnv t) m) where
 instance (Reflex t, AskRoute t m) => AskRoute t (EventWriterT t w m) where
   askRoute = lift askRoute
 
-routeLink ::
+navLink ::
   forall t m a.
   (DomBuilder t m, SetRoute t m, RouteToUrl m) =>
-  Route ->
+  Nav ->
   m a ->
   m a
-routeLink route inner = do
+navLink nav inner = do
   toUrl <- askRouteToUrl
-  let cfg =
+  let route = getRoute nav
+      cfg =
         (def :: ElementConfig EventResult t (DomBuilderSpace m))
           & elementConfig_initialAttributes
           .~ ("href" =: toUrl route)
@@ -121,7 +127,7 @@ routeLink route inner = do
             Click
             (const preventDefault)
   (aEl, result) <- element "a" cfg inner
-  setRoute $ Push route <$ domEvent Click aEl
+  setRoute $ nav <$ domEvent Click aEl
   pure result
 
 runRouteViewT ::
@@ -152,10 +158,16 @@ runRouteViewT widget = do
     hist <- getHistory =<< currentWindowUnchecked
     mapM_
       ( \nav -> do
-          let r = case nav of Push r' -> r'; Replace r' -> r'
-          case nav of
-            Push _ -> pushState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
-            Replace _ -> replaceState hist (Nothing :: Maybe Text) ("" :: Text) (Just (renderRoute r))
-          liftIO $ triggerNavRoute r
+          let route = getRoute nav
+              pushOrReplaceState = case nav of
+                Push _ -> pushState
+                Replace _ -> replaceState
+          pushOrReplaceState
+            hist
+            (Nothing :: Maybe Text)
+            ("" :: Text)
+            $ Just
+            $ renderRoute route
+          liftIO $ triggerNavRoute route
       )
       navs

@@ -121,7 +121,11 @@ executable frontend
   else
     hs-source-dirs: src-bin-ghc
     build-depends:
+      bytestring,
+      http-client,
+      http-client-tls,
       jsaddle-warp,
+      text,
       wai,
       wai-app-static,
       warp,
