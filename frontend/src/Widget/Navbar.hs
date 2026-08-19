@@ -7,7 +7,10 @@ import Route (AskRoute (..), Nav (..), Route (..), SetRoute (..))
 import qualified Widget.Icon as Icon
 
 widget :: (DomBuilder t m) => m () -> m ()
-widget = elClass "div" "navbar sticky shadow top-0 flex px-4 gap-2 bg-base-200"
+widget =
+  elAttr "div" $
+    "class" =: "navbar sticky shadow top-0 flex px-4 gap-2 bg-base-200"
+      <> "style" =: "padding-top: calc(env(safe-area-inset-top) + 0.5rem)"
 
 menu ::
   (DomBuilder t m, PostBuild t m, SetRoute t m, AskRoute t m) =>

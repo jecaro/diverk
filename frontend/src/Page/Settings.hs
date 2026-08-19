@@ -41,7 +41,8 @@ page ::
   Maybe Config ->
   m (Event t Config)
 page mbConfig =
-  Widget.card $ do
+  elAttr "div" ("style" =: "padding-top: env(safe-area-inset-top)") $
+    Widget.card $ do
     rec dyOwner <- fmap MkOwner <$> inputOwner evOwnerValid
         dyRepo <- fmap MkRepo <$> inputRepo (updated dyRepoExists)
         dyToken <- fmap mkToken <$> inputToken (updated dyTokenValid)
