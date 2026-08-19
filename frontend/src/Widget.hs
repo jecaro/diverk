@@ -3,6 +3,7 @@ module Widget (card, error, link, spinner) where
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (link)
+import Route (AskRoute (..), RouteToUrl, SetRoute (..), routeLink)
 import qualified Widget.Icon as Icon
 import Prelude hiding (error)
 
@@ -34,10 +35,15 @@ spinner =
       )
       blank
 
--- "try again" navigates to the current URL (href="") which reloads the page,
--- re-fetching data fresh without requiring any routing machinery here.
-error :: (DomBuilder t m) => Text -> m ()
-error msg =
+error ::
+  ( DomBuilder t m,
+    PostBuild t m,
+    SetRoute t m,
+    RouteToUrl m,
+    AskRoute t m
+  ) =>
+  Text -> m ()
+error msg = do
   elClass "div" "p-4" $
     elClass "div" (T.unwords ["alert", "alert-error", "shadow-lg"]) $
       do
@@ -46,9 +52,10 @@ error msg =
           el "div" $ do
             elClass "h3" "font-bold" $ text "An error occurred "
             elClass "div" "text-xs" $ text msg
-        el "div" $
-          elAttr "a" ("class" =: "link" <> "href" =: "") $
-            text "try again"
+        el "div" $ do
+          dyRoute <- askRoute
+          dyn_ $ ffor dyRoute $ \route ->
+            routeLink route $ text "try again"
 
 card :: (DomBuilder t m) => m a -> m a
 card =
