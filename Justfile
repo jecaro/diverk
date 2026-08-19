@@ -6,6 +6,11 @@ css:
 wasm:
     ./frontend/build.sh
 
+dev: css
+    ghcid \
+        --command='cabal --project-dir=frontend --enable-multi-repl repl exe:frontend lib:frontend' \
+        --test='MyMain.main'
+
 wasm-prod:
     ./frontend/build.sh -Oz
 

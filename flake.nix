@@ -111,6 +111,7 @@
         }).androidsdk;
       androidSdkRoot = "${androidSdk}/libexec/android-sdk";
 
+
     in
     let
       systemPackages = rec {
@@ -212,12 +213,30 @@
     {
       packages.${system} = systemPackages;
 
-      devShells.${system} = {
-        # `nix develop` — WASM + Android build shell.
+      devShells.${system} = rec {
+        default = native;
+
+        native = pkgs.haskellPackages.developPackage {
+          root = ./frontend;
+          returnShellEnv = true;
+          withHoogle = false;
+          modifier = drv:
+            pkgs.haskell.lib.addBuildTools drv [
+              pkgs.just
+              pkgs.nodejs
+              pkgs.cabal-install
+              pkgs.haskellPackages.ghcid
+              pkgs.haskellPackages.ormolu
+              pkgs.haskellPackages.cabal-fmt
+              pkgs.haskellPackages.haskell-language-server
+            ];
+        };
+
+        # `nix develop .#wasm` — WASM + Android build shell.
         # shellFor pre-populates GHC_PACKAGE_PATH with WASM-compiled packages
         # so wasm32-wasi-cabal only needs to compile frontend/.
-        default = pkgs.mkShell {
-          name = "diverk";
+        wasm = pkgs.mkShell {
+          name = "diverk-wasm";
           inputsFrom = [
             (wasmHaskellPkgs.shellFor {
               packages = ps: [ ps.frontend ];
@@ -236,6 +255,7 @@
             pkgs.haskellPackages.ormolu
             pkgs.jdk17
             pkgs.just
+            pkgs.cabal-install
             pkgs.nodejs
             (pkgs.writeShellScriptBin "update-android-deps"
               "exec ${android-gradle-deps.updateScript}")

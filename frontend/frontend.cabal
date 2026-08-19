@@ -103,13 +103,19 @@ executable frontend
   build-depends:
     , base
     , frontend
-    , ghc-experimental
-    , jsaddle
-    , jsaddle-wasm
     , reflex-dom-core
-    , text
-    , transformers
 
-  -- Build a WASM reactor module exporting hs_start (GHC WebAssembly backend).
-  ghc-options:
-    -no-hs-main -optl-mexec-model=reactor "-optl-Wl,--export=hs_start"
+  if arch(wasm32)
+    build-depends:
+      , ghc-experimental
+      , jsaddle-wasm
+    ghc-options:
+      -no-hs-main -optl-mexec-model=reactor "-optl-Wl,--export=hs_start"
+  else
+    build-depends:
+      , jsaddle-warp
+      , wai
+      , wai-app-static
+      , warp
+      , websockets
+    ghc-options: -main-is MyMain
