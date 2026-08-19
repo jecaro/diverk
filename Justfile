@@ -5,6 +5,8 @@ css:
 
 native-dev: css
     ghcid \
+        --allow-eval \
+        --outputfile=frontend/errors.err \
         --command='cabal --project-dir=frontend --enable-multi-repl repl exe:frontend lib:frontend' \
         --test='Main.main'
 
