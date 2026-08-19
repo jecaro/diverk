@@ -44,7 +44,7 @@ $ just run
 ```
 
 This builds the CSS (Tailwind + FontAwesome), compiles the frontend to
-WebAssembly, and starts a server at <http://localhost:8099>. On subsequent
+WebAssembly, and starts a server at <http://localhost:3000>. On subsequent
 iterations, `just wasm` recompiles only the Haskell and skips the CSS step.
 
 ### Nix build

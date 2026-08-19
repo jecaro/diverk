@@ -2,13 +2,13 @@
 // `application/wasm`, which `WebAssembly.instantiateStreaming` requires and
 // `python -m http.server` does not send).
 //
-//   node serve.mjs [DIR] [PORT]   # defaults: frontend/dist, 8099
+//   node serve.mjs [DIR] [PORT]   # defaults: frontend/dist, 3000
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 
 const root = process.argv[2] ?? "frontend/dist";
-const port = Number(process.argv[3] ?? 8099);
+const port = Number(process.argv[3] ?? 3000);
 
 const types = {
   ".html": "text/html",
