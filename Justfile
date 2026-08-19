@@ -1,33 +1,29 @@
-default: all
+default: css wasm-dev
 
 css:
     ./static/build-css.sh
 
-wasm:
-    ./frontend/build.sh
-
-dev: css
+native-dev: css
     ghcid \
         --command='cabal --project-dir=frontend --enable-multi-repl repl exe:frontend lib:frontend' \
         --test='MyMain.main'
 
+wasm-dev:
+    ./frontend/build.sh
+
 wasm-prod:
     ./frontend/build.sh -Oz
 
-all: css wasm
-
-prod: css wasm-prod
-
-run: all
+wasm-run: default
     node serve.mjs
 
 # Debug builds are auto-signed by gradle and can be installed directly with adb.
-android-debug: all
+android-debug: css wasm-dev
     ./mobile/build.sh debug
 
 # Release builds require mobile/android/keystore.properties to be set up.
 # See mobile/android/keystore.properties.example for the required fields.
-android-release: prod
+android-release: css wasm-prod
     ./mobile/build.sh release
 
 clean:
