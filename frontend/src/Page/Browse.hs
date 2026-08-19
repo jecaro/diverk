@@ -25,7 +25,7 @@ import Model (Config (..), Path (..))
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import qualified Request
-import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute, navLink)
+import qualified Route
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
@@ -115,9 +115,9 @@ page ::
     Prerender t m,
     MonadHold t m,
     MonadFix m,
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
   Config ->
   [Text] ->
@@ -142,15 +142,15 @@ page MkConfig {..} path = do
 contentWidget ::
   ( DomBuilder t m,
     Prerender t m,
-    SetRoute t m,
-    RouteToUrl m
+    Route.Set t m,
+    Route.ToUrl m
   ) =>
   State ->
   m ()
 contentWidget (StDirectory pathsToFiles) =
   forM_ pathsToFiles $ \(MkPath pathToFile) ->
     el "div" $
-      navLink (Push (Browse pathToFile)) $
+      Route.link (Route.Push (Route.Browse pathToFile)) $
         text . fromMaybe "/" $
           pathToFile ^? _last
 contentWidget (StMarkdown html) =
@@ -167,9 +167,9 @@ contentWidget _ = Widget.spinner
 navbar' ::
   ( DomBuilder t m,
     PostBuild t m,
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
   [Text] ->
   Bool ->
@@ -183,7 +183,7 @@ navbar' path hasToken =
   where
     liIntermediatePath intermediatePath =
       el "li" $
-        navLink (Push (Browse intermediatePath)) $
+        Route.link (Route.Push (Route.Browse intermediatePath)) $
           homeOrText intermediatePath
     homeOrText [] = Icon.house
     homeOrText [x] = text x

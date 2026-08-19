@@ -3,29 +3,29 @@
 -- The design mirrors Obelisk's @Obelisk.Route.Frontend@: two typeclasses let
 -- widgets express routing needs as constraints rather than explicit parameters.
 --
--- * 'SetRoute' — a widget that wants to navigate calls 'setRoute'. Under the
+-- * 'Set' — a widget that wants to navigate calls 'set'. Under the
 --   hood this is 'EventWriterT': navigation events bubble up through the widget
 --   tree and are collected at the top without any explicit plumbing.
 --
--- * 'RouteToUrl' — a widget that needs to render a URL (e.g. for an @\<a href\>@)
---   calls 'askRouteToUrl'. Under the hood this is 'ReaderT': 'renderRoute' is
+-- * 'ToUrl' — a widget that needs to render a URL (e.g. for an @\<a href\>@)
+--   calls 'toUrl'. Under the hood this is 'ReaderT': 'render' is
 --   threaded down implicitly.
 --
--- 'runRouteViewT' wires both transformers together, reads the initial URL,
+-- 'run' wires both transformers together, reads the initial URL,
 -- listens for back/forward navigation, and drives the browser History API:
 -- 'Push' adds a history entry, 'Replace' overwrites the current one (used for
 -- the home-redirect to avoid a spurious back-button step).
 module Route
   ( Route (..),
     Nav (..),
-    getRoute,
-    parseRoute,
-    renderRoute,
-    SetRoute (..),
-    RouteToUrl (..),
-    AskRoute (..),
-    navLink,
-    runRouteViewT,
+    get,
+    parse,
+    render,
+    Set (..),
+    ToUrl (..),
+    Ask (..),
+    link,
+    run,
   )
 where
 
@@ -43,7 +43,7 @@ import JSDOM.Generated.Location (getPathname)
 import JSDOM.Generated.Window (getHistory, getLocation)
 import JSDOM.Types (EventListener (..))
 import Language.Javascript.JSaddle (MonadJSM, function, liftJSM, toJSVal)
-import Reflex.Dom.Core hiding (Home, Search)
+import Reflex.Dom.Core hiding (Home, Search, link)
 
 data Route
   = Home
@@ -58,12 +58,12 @@ data Nav
   | Replace Route
   deriving stock (Eq, Show)
 
-getRoute :: Nav -> Route
-getRoute (Push r) = r
-getRoute (Replace r) = r
+get :: Nav -> Route
+get (Push r) = r
+get (Replace r) = r
 
-parseRoute :: Text -> Route
-parseRoute path = case filter (not . T.null) (T.splitOn "/" path) of
+parse :: Text -> Route
+parse path = case filter (not . T.null) (T.splitOn "/" path) of
   [] -> Home
   ("repo" : rest) -> Browse rest
   ["settings"] -> Settings
@@ -71,66 +71,66 @@ parseRoute path = case filter (not . T.null) (T.splitOn "/" path) of
   ["about"] -> About
   _ -> Home
 
-renderRoute :: Route -> Text
-renderRoute Home = "/"
-renderRoute (Browse []) = "/repo"
-renderRoute (Browse path) = "/repo/" <> T.intercalate "/" path
-renderRoute Settings = "/settings"
-renderRoute (Search kws) = "/search/" <> T.intercalate "/" kws
-renderRoute About = "/about"
+render :: Route -> Text
+render Home = "/"
+render (Browse []) = "/repo"
+render (Browse path) = "/repo/" <> T.intercalate "/" path
+render Settings = "/settings"
+render (Search kws) = "/search/" <> T.intercalate "/" kws
+render About = "/about"
 
 data RouteEnv t = RouteEnv
   { reDyRoute :: Dynamic t Route,
     reRenderRoute :: Route -> Text
   }
 
-class (Reflex t, Monad m) => SetRoute t m | m -> t where
-  setRoute :: Event t Nav -> m ()
+class (Reflex t, Monad m) => Set t m | m -> t where
+  set :: Event t Nav -> m ()
 
-class (Monad m) => RouteToUrl m where
-  askRouteToUrl :: m (Route -> Text)
+class (Monad m) => ToUrl m where
+  toUrl :: m (Route -> Text)
 
-class (Reflex t, Monad m) => AskRoute t m | m -> t where
-  askRoute :: m (Dynamic t Route)
+class (Reflex t, Monad m) => Ask t m | m -> t where
+  ask :: m (Dynamic t Route)
 
-instance (Reflex t, Monad m) => SetRoute t (EventWriterT t [Nav] m) where
-  setRoute ev = tellEvent (pure <$> ev)
+instance (Reflex t, Monad m) => Set t (EventWriterT t [Nav] m) where
+  set ev = tellEvent (pure <$> ev)
 
-instance (Reflex t, Monad m) => RouteToUrl (ReaderT (RouteEnv t) m) where
-  askRouteToUrl = asks reRenderRoute
+instance (Reflex t, Monad m) => ToUrl (ReaderT (RouteEnv t) m) where
+  toUrl = asks reRenderRoute
 
-instance (RouteToUrl m) => RouteToUrl (EventWriterT t w m) where
-  askRouteToUrl = lift askRouteToUrl
+instance (ToUrl m) => ToUrl (EventWriterT t w m) where
+  toUrl = lift toUrl
 
-instance (Reflex t, Monad m) => AskRoute t (ReaderT (RouteEnv t) m) where
-  askRoute = asks reDyRoute
+instance (Reflex t, Monad m) => Ask t (ReaderT (RouteEnv t) m) where
+  ask = asks reDyRoute
 
-instance (Reflex t, AskRoute t m) => AskRoute t (EventWriterT t w m) where
-  askRoute = lift askRoute
+instance (Reflex t, Ask t m) => Ask t (EventWriterT t w m) where
+  ask = lift ask
 
-navLink ::
+link ::
   forall t m a.
-  (DomBuilder t m, SetRoute t m, RouteToUrl m) =>
+  (DomBuilder t m, Set t m, ToUrl m) =>
   Nav ->
   m a ->
   m a
-navLink nav inner = do
-  toUrl <- askRouteToUrl
-  let route = getRoute nav
+link nav inner = do
+  renderFn <- toUrl
+  let route = get nav
       cfg =
         (def :: ElementConfig EventResult t (DomBuilderSpace m))
           & elementConfig_initialAttributes
-          .~ ("href" =: toUrl route)
+          .~ ("href" =: renderFn route)
           & elementConfig_eventSpec
           %~ addEventSpecFlags
             (Proxy :: Proxy (DomBuilderSpace m))
             Click
             (const preventDefault)
   (aEl, result) <- element "a" cfg inner
-  setRoute $ nav <$ domEvent Click aEl
+  set $ nav <$ domEvent Click aEl
   pure result
 
-runRouteViewT ::
+run ::
   ( TriggerEvent t m,
     MonadHold t m,
     PerformEvent t m,
@@ -139,35 +139,30 @@ runRouteViewT ::
   ) =>
   EventWriterT t [Nav] (ReaderT (RouteEnv t) m) () ->
   m ()
-runRouteViewT widget = do
+run widget = do
   initialRoute <- liftJSM $ do
     win <- currentWindowUnchecked
-    parseRoute <$> (getPathname =<< getLocation win)
+    parse <$> (getPathname =<< getLocation win)
   (evNavRoute, triggerNavRoute) <- newTriggerEvent
   (evPopRoute, triggerPopRoute) <- newTriggerEvent
   liftJSM $ do
     win <- currentWindowUnchecked
     cb <- function $ \_ _ _ -> do
       path <- getPathname =<< getLocation =<< currentWindowUnchecked
-      liftIO $ triggerPopRoute (parseRoute path)
+      liftIO $ triggerPopRoute (parse path)
     cbVal <- toJSVal cb
     addEventListener win ("popstate" :: Text) (Just (EventListener cbVal)) False
   dyRoute <- holdDyn initialRoute $ leftmost [evPopRoute, evNavRoute]
-  (_, evNavs) <- flip runReaderT (RouteEnv dyRoute renderRoute) $ runEventWriterT widget
+  (_, evNavs) <- flip runReaderT (RouteEnv dyRoute render) $ runEventWriterT widget
   performEvent_ $ ffor evNavs $ \navs -> liftJSM $ do
     hist <- getHistory =<< currentWindowUnchecked
     mapM_
       ( \nav -> do
-          let route = getRoute nav
-              pushOrReplaceState = case nav of
+          let route = get nav
+              pushOrReplace = case nav of
                 Push _ -> pushState
                 Replace _ -> replaceState
-          pushOrReplaceState
-            hist
-            (Nothing :: Maybe Text)
-            ("" :: Text)
-            $ Just
-            $ renderRoute route
+          pushOrReplace hist (Nothing :: Maybe Text) ("" :: Text) (Just (render route))
           liftIO $ triggerNavRoute route
       )
       navs

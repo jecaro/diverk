@@ -19,7 +19,7 @@ import Model (Owner, Path (..), Repo, Token)
 import Reflex.Dom.Core hiding (Search)
 import Reflex.Extra (onClient)
 import qualified Request
-import Route (AskRoute, Nav (..), Route (..), RouteToUrl, SetRoute (..), navLink)
+import qualified Route
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
@@ -81,9 +81,9 @@ page ::
     Prerender t m,
     MonadHold t m,
     MonadFix m,
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
   Owner ->
   Repo ->
@@ -114,14 +114,14 @@ page owner repo token keywords = do
     request = Request.search token owner repo keywords
     elPath (MkPath pieces) =
       el "div" $
-        navLink (Push $ Browse pieces) $
+        Route.link (Route.Push $ Route.Browse pieces) $
           text $
             T.intercalate "/" pieces
 
 searchInput ::
   ( DomBuilder t m,
     Prerender t m,
-    SetRoute t m
+    Route.Set t m
   ) =>
   [Text] ->
   m (Dynamic t [Text])
@@ -140,7 +140,7 @@ searchInput keywords = elClass "form-control" "flex-1" $ do
           evEnterOnNonEmptyKeywords =
             ffilter (not . null) . tagPromptlyDyn dyKeywords $ keypress Enter ie
       pure (dyKeywords, evEnterOnNonEmptyKeywords)
-  setRoute $ Push . Search <$> evEnterOnNonEmptyKeywords
+  Route.set $ Route.Push . Route.Search <$> evEnterOnNonEmptyKeywords
   pure dyKeywords
   where
     inputElement' =
@@ -161,7 +161,7 @@ searchInput keywords = elClass "form-control" "flex-1" $ do
 searchButton ::
   ( DomBuilder t m,
     PostBuild t m,
-    SetRoute t m
+    Route.Set t m
   ) =>
   Dynamic t [Text] ->
   m ()
@@ -170,7 +170,7 @@ searchButton dyKeywords =
     dyn_ . ffor dyHasKeyWords $ \case
       True -> do
         (e, _) <- elDynClass' "span" (iconClasses <$> dyHasKeyWords) blank
-        setRoute $ Push . Search <$> tagPromptlyDyn dyKeywords (domEvent Click e)
+        Route.set $ Route.Push . Route.Search <$> tagPromptlyDyn dyKeywords (domEvent Click e)
       False -> searchIcon
   where
     dyHasKeyWords = not . null <$> dyKeywords

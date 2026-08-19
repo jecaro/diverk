@@ -14,7 +14,7 @@ import qualified Page.Browse as Browse
 import qualified Page.Search as Search
 import qualified Page.Settings as Settings
 import Reflex.Dom.Core hiding (Home, Search)
-import Route (AskRoute (..), Nav (..), Route (..), RouteToUrl, SetRoute (..))
+import qualified Route
 import Theme (setDarkModeOn)
 import Witherable (catMaybes)
 
@@ -60,13 +60,13 @@ frontendBody ::
     PerformEvent t m,
     TriggerEvent t m,
     MonadIO (Performable m),
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
   m ()
 frontendBody = do
-  dyRoute <- askRoute
+  dyRoute <- Route.ask
   evSettingsLoaded <- fmap MkConfigLoaded <$> load
 
   rec dyState <- holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
@@ -91,33 +91,33 @@ route ::
     PerformEvent t m,
     TriggerEvent t m,
     MonadIO (Performable m),
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
-  Route ->
+  Route.Route ->
   State ->
   m (Event t State)
-route Settings (MkConfigLoaded mbConfig) = do
+route Route.Settings (MkConfigLoaded mbConfig) = do
   evOk <- Settings.page mbConfig
   evSaved <- save evOk
-  setRoute $ Push (Browse []) <$ evSaved
+  Route.set $ Route.Push (Route.Browse []) <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
-route (Browse path) (MkConfigLoaded (Just config)) = do
+route (Route.Browse path) (MkConfigLoaded (Just config)) = do
   Browse.page config path
   pure never
-route (Search keywords) (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
+route (Route.Search keywords) (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
   Search.page owner repo token keywords
   pure never
-route Home (MkConfigLoaded (Just _)) = do
+route Route.Home (MkConfigLoaded (Just _)) = do
   ev <- getPostBuild
-  setRoute $ Replace (Browse []) <$ ev
+  Route.set $ Route.Replace (Route.Browse []) <$ ev
   pure never
 route _ (MkConfigLoaded Nothing) = do
   ev <- getPostBuild
-  setRoute $ Replace Settings <$ ev
+  Route.set $ Route.Replace Route.Settings <$ ev
   pure never
-route About (MkConfigLoaded mbConfig) = do
+route Route.About (MkConfigLoaded mbConfig) = do
   About.page hasToken
   pure never
   where

@@ -11,7 +11,7 @@ import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
 import Network.Wai.Handler.Warp (run)
 import Network.WebSockets (defaultConnectionOptions)
 import Reflex.Dom.Core
-import Route (runRouteViewT)
+import qualified Route
 
 githubProxy :: HC.Manager -> [T.Text] -> Application
 githubProxy mgr pathSegments req respond = do
@@ -46,7 +46,7 @@ main = do
   app <-
     jsaddleOr
       defaultConnectionOptions
-      (mainWidgetWithHead frontendHead $ runRouteViewT frontendBody)
+      (mainWidgetWithHead frontendHead $ Route.run frontendBody)
       fallback
   putStrLn "serving app on http://localhost:3000"
   run 3000 app

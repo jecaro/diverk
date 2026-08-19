@@ -3,7 +3,7 @@ module Widget (card, error, link, spinner) where
 import Data.Text (Text)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (link)
-import Route (AskRoute (..), Nav (..), RouteToUrl, SetRoute (..), navLink)
+import qualified Route
 import qualified Widget.Icon as Icon
 import Prelude hiding (error)
 
@@ -38,9 +38,9 @@ spinner =
 error ::
   ( DomBuilder t m,
     PostBuild t m,
-    SetRoute t m,
-    RouteToUrl m,
-    AskRoute t m
+    Route.Set t m,
+    Route.ToUrl m,
+    Route.Ask t m
   ) =>
   Text -> m ()
 error msg = do
@@ -53,9 +53,9 @@ error msg = do
             elClass "h3" "font-bold" $ text "An error occurred "
             elClass "div" "text-xs" $ text msg
         el "div" $ do
-          dyRoute <- askRoute
+          dyRoute <- Route.ask
           dyn_ $ ffor dyRoute $ \route ->
-            navLink (Replace route) $ text "try again"
+            Route.link (Route.Replace route) $ text "try again"
 
 card :: (DomBuilder t m) => m a -> m a
 card =

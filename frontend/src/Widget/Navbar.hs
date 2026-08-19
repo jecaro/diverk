@@ -3,7 +3,7 @@ module Widget.Navbar (widget, menu, spacer) where
 import Control.Monad (void)
 import qualified Data.Text as T
 import Reflex.Dom.Core hiding (Home, Search)
-import Route (AskRoute (..), Nav (..), Route (..), SetRoute (..))
+import qualified Route
 import qualified Widget.Icon as Icon
 
 widget :: (DomBuilder t m) => m () -> m ()
@@ -13,11 +13,11 @@ widget =
       <> "style" =: "padding-top: calc(env(safe-area-inset-top) + 0.5rem)"
 
 menu ::
-  (DomBuilder t m, PostBuild t m, SetRoute t m, AskRoute t m) =>
+  (DomBuilder t m, PostBuild t m, Route.Set t m, Route.Ask t m) =>
   Bool ->
   m ()
 menu enableSearch = do
-  dyRoute <- askRoute
+  dyRoute <- Route.ask
   let dyOnCurrent route = not . sameRoute route <$> dyRoute
   elClass "div" "dropdown dropdown-end" $ do
     elAttr "label" ("tabindex" =: "0" <> "class" =: "btn btn-ghost btn-circle") $
@@ -38,13 +38,13 @@ menu enableSearch = do
               ]
       )
       $ do
-        elMenuItem Icon.house (Browse []) "Browse" dyOnCurrent
+        elMenuItem Icon.house (Route.Browse []) "Browse" dyOnCurrent
         -- Search should only be available if there is a token. That's a
         -- requirement of the GitHub API.
-        elMenuItem Icon.search (Search []) "Search" $
+        elMenuItem Icon.search (Route.Search []) "Search" $
           fmap (&& enableSearch) . dyOnCurrent
-        elMenuItem Icon.gear Settings "Settings" dyOnCurrent
-        elMenuItem Icon.info About "About" dyOnCurrent
+        elMenuItem Icon.gear Route.Settings "Settings" dyOnCurrent
+        elMenuItem Icon.info Route.About "About" dyOnCurrent
   where
     elMenuItem icon route label dyRouteEnable = do
       let dyRouteEnable' = dyRouteEnable route
@@ -53,17 +53,17 @@ menu enableSearch = do
           void icon
           text label
       let evClickIfRouteEnable = gate (current dyRouteEnable') $ domEvent Click e
-      setRoute $ Push route <$ evClickIfRouteEnable
+      Route.set $ Route.Push route <$ evClickIfRouteEnable
 
     liClass True = mempty
     liClass False = "disabled"
 
     -- Compare route constructors, ignoring payloads
-    sameRoute Home Home = True
-    sameRoute (Browse _) (Browse _) = True
-    sameRoute Settings Settings = True
-    sameRoute (Search _) (Search _) = True
-    sameRoute About About = True
+    sameRoute Route.Home Route.Home = True
+    sameRoute (Route.Browse _) (Route.Browse _) = True
+    sameRoute Route.Settings Route.Settings = True
+    sameRoute (Route.Search _) (Route.Search _) = True
+    sameRoute Route.About Route.About = True
     sameRoute _ _ = False
 
 spacer :: (DomBuilder t m) => m ()

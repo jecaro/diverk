@@ -1,12 +1,12 @@
 module Page.About (page) where
 
 import Reflex.Dom.Core
-import Route (AskRoute, SetRoute)
+import qualified Route
 import qualified Widget
 import qualified Widget.Navbar as Navbar
 
 page ::
-  (DomBuilder t m, PostBuild t m, SetRoute t m, AskRoute t m) =>
+  (DomBuilder t m, PostBuild t m, Route.Set t m, Route.Ask t m) =>
   Bool ->
   m ()
 page enableSearch = do
