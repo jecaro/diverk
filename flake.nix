@@ -103,11 +103,11 @@
 
       # --- Android SDK (lazy: only built when the `android` shell is used) ---
       # Versions match what a Capacitor 6/7 project targets (AGP 8, JDK 17,
-      # compileSdk 34). Re-align these with mobile/android after `cap add`.
+      # compileSdk 35). Re-align these with mobile/android after `cap add`.
       androidSdk =
         (pkgs.androidenv.composeAndroidPackages {
-          platformVersions = [ "34" ];
-          buildToolsVersions = [ "34.0.0" ];
+          platformVersions = [ "34" "35" ];
+          buildToolsVersions = [ "34.0.0" "35.0.0" ];
         }).androidsdk;
       androidSdkRoot = "${androidSdk}/libexec/android-sdk";
 
@@ -158,7 +158,7 @@
           ANDROID_SDK_ROOT = androidSdkRoot;
           ANDROID_HOME = androidSdkRoot;
           JAVA_HOME = "${pkgs.jdk17.home}";
-          GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/34.0.0/aapt2";
+          GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/35.0.0/aapt2";
 
           mitmCache = android-gradle-deps;
 
@@ -269,7 +269,7 @@
             ln -sfn ${diverk-frontend-deps}/node_modules frontend/node_modules
             ln -sfn ${diverk-mobile-deps}/node_modules mobile/node_modules
             export JAVA_HOME="${pkgs.jdk17.home}"
-            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/34.0.0/aapt2 $GRADLE_OPTS"
+            export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/35.0.0/aapt2 $GRADLE_OPTS"
           '';
         };
 
