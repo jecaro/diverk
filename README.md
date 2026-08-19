@@ -29,23 +29,38 @@ rate limit is 10 searches per hour.
 ## Building
 
 The app is written in Haskell with [Reflex][reflex] and compiled to
-WebAssembly using the [GHC WebAssembly backend][ghc-wasm]. It is a fully
+WebAssembly using the GHC WebAssembly backend. It is a fully
 client-side single-page app. There is no backend. The toolchain
 (`wasm32-wasi-ghc`, `wasm32-wasi-cabal`, `node`, ...) is provided by a Nix
 flake wrapping [ghc-wasm-meta][ghc-wasm-meta].
 
-### Dev workflow
+### Dev workflow - native GHC for fast iteration
 
-Enter the development shell, then build and serve:
+The default shell uses a native GHC toolchain with [jsaddle-warp][jsaddle-warp]
+to run the app directly in the browser without a WebAssembly compile step.
+[ghcid] watches for source changes and reloads the server automatically.
 
 ```bash
-$ nix develop
-$ just run
+$ nix develop .#native
+$ just native-dev
 ```
 
-This builds the CSS (Tailwind + FontAwesome), compiles the frontend to
-WebAssembly, and starts a server at <http://localhost:3000>. On subsequent
-iterations, `just wasm` recompiles only the Haskell and skips the CSS step.
+This builds the CSS (Tailwind + FontAwesome) and starts a hot-reloading server
+at <http://localhost:3000>. Note that this doesn't work with Firefox, only 
+Chrome.
+
+### Dev workflow - WebAssembly
+
+To test the production code path (compiled to WebAssembly):
+
+```bash
+$ nix develop .#wasm
+$ just wasm-run
+```
+
+This builds the CSS, compiles the frontend to WebAssembly, and starts a server
+at <http://localhost:3000>. To recompile only the Haskell and skip the CSS
+step: `just wasm-dev`.
 
 ### Nix build
 
@@ -53,8 +68,8 @@ iterations, `just wasm` recompiles only the Haskell and skips the CSS step.
 $ nix build
 ```
 
-Produces an optimised, self-contained web app in `result/`. From the `nix 
-develop` shell, serve it with:
+Produces an optimised, self-contained web app in `result/`. From the `.#wasm`
+shell, serve it with:
 
 ```bash
 $ node serve.mjs result
@@ -66,7 +81,7 @@ Set up `mobile/android/keystore.properties` (see
 `mobile/android/keystore.properties.example`) for release signing, then:
 
 ```bash
-$ nix develop
+$ nix develop .#wasm
 $ just android-debug    # debug APK, auto-signed, installable via adb
 $ just android-release  # release APK, requires keystore.properties
 ```
@@ -82,9 +97,10 @@ $ nix build .#android-release-aab
 ```
 
 [ghc-wasm-meta]: https://gitlab.haskell.org/ghc/ghc-wasm-meta
-[ghc-wasm]: https://www.haskell.org/ghc/blog/20220222-wasm-backend-merged.html
+[ghcid]: https://github.com/ndmitchell/ghcid
 [github-rate-limit]: https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
 [github-search-code]: https://docs.github.com/en/rest/search/search#search-code
+[jsaddle-warp]: https://hackage.haskell.org/package/jsaddle-warp
 [play]: https://play.google.com/store/apps/details?id=org.jecaro.diverk
 [reflex]: https://reflex-frp.org
 [tokens]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens
