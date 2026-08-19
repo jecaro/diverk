@@ -6,7 +6,7 @@ css:
 native-dev: css
     ghcid \
         --command='cabal --project-dir=frontend --enable-multi-repl repl exe:frontend lib:frontend' \
-        --test='MyMain.main'
+        --test='Main.main'
 
 wasm-dev:
     ./frontend/build.sh

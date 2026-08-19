@@ -222,13 +222,13 @@
           withHoogle = false;
           modifier = drv:
             pkgs.haskell.lib.addBuildTools drv [
+              pkgs.cabal-install
+              pkgs.haskellPackages.cabal-gild
+              pkgs.haskellPackages.ghcid
+              pkgs.haskellPackages.haskell-language-server
+              pkgs.haskellPackages.ormolu
               pkgs.just
               pkgs.nodejs
-              pkgs.cabal-install
-              pkgs.haskellPackages.ghcid
-              pkgs.haskellPackages.ormolu
-              pkgs.haskellPackages.cabal-fmt
-              pkgs.haskellPackages.haskell-language-server
             ];
         };
 
@@ -250,7 +250,7 @@
             pkgs.esbuild
             pkgs.git
             pkgs.gradle
-            pkgs.haskellPackages.cabal-fmt
+            pkgs.haskellPackages.cabal-gild
             pkgs.haskellPackages.ghcid
             pkgs.haskellPackages.ormolu
             pkgs.jdk17
