@@ -62,7 +62,6 @@ body ::
     TriggerEvent t m,
     MonadIO.MonadIO (Performable m),
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   m ()
@@ -95,7 +94,6 @@ route ::
     TriggerEvent t m,
     MonadIO.MonadIO (Performable m),
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   Route.Route ->

@@ -82,7 +82,6 @@ page ::
     MonadHold t m,
     MonadFix.MonadFix m,
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   Model.Owner ->
