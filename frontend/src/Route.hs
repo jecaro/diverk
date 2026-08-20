@@ -28,17 +28,19 @@ module Route
 where
 
 import Control.Lens ((%~))
+import qualified Control.Monad as Monad
 import qualified Control.Monad.IO.Class as MonadIO
 import qualified Control.Monad.Trans.Class as Trans
 import qualified Control.Monad.Trans.Reader as ReaderT
+import qualified Data.Foldable as Foldable
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
-import qualified JSDOM as JSDOM
-import qualified JSDOM.Generated.EventTarget as JSDOM
+import qualified JSDOM
+import qualified JSDOM.EventM as JSDOM
 import qualified JSDOM.Generated.History as JSDOM
 import qualified JSDOM.Generated.Location as JSDOM
 import qualified JSDOM.Generated.Window as JSDOM
-import qualified JSDOM.Types as JSDOM
+import qualified JSDOM.Generated.WindowEventHandlers as JSDOM
 import qualified Language.Javascript.JSaddle as JSaddle
 import Reflex.Dom.Core hiding (Home, Search, link)
 
@@ -83,7 +85,7 @@ class (Reflex t, Monad m) => Ask t m | m -> t where
   ask :: m (Dynamic t Route)
 
 instance (Reflex t, Monad m) => Set t (EventWriterT t [Nav] m) where
-  set ev = tellEvent (pure <$> ev)
+  set event = tellEvent (pure <$> event)
 
 instance (Reflex t, Monad m) => Ask t (ReaderT.ReaderT (Dynamic t Route) m) where
   ask = ReaderT.ask
@@ -99,7 +101,7 @@ link ::
   m a
 link nav inner = do
   let route = get nav
-      cfg =
+      config =
         (def :: ElementConfig EventResult t (DomBuilderSpace m))
           & elementConfig_initialAttributes
           .~ ("href" =: render route)
@@ -108,8 +110,8 @@ link nav inner = do
             (Proxy.Proxy :: Proxy.Proxy (DomBuilderSpace m))
             Click
             (const preventDefault)
-  (aEl, result) <- element "a" cfg inner
-  set $ nav <$ domEvent Click aEl
+  (aElement, result) <- element "a" config inner
+  set $ nav <$ domEvent Click aElement
   pure result
 
 run ::
@@ -125,34 +127,31 @@ run widget = do
   initialRoute <- JSaddle.liftJSM $ do
     win <- JSDOM.currentWindowUnchecked
     parse <$> (JSDOM.getPathname =<< JSDOM.getLocation win)
-  (evNavRoute, triggerNavRoute) <- newTriggerEvent
+
   (evPopRoute, triggerPopRoute) <- newTriggerEvent
   JSaddle.liftJSM $ do
-    win <- JSDOM.currentWindowUnchecked
-    cb <- JSaddle.function $ \_ _ _ -> do
+    window <- JSDOM.currentWindowUnchecked
+    Monad.void $ JSDOM.on window JSDOM.popState $ do
       path <-
         JSDOM.getPathname
           =<< JSDOM.getLocation
           =<< JSDOM.currentWindowUnchecked
-      MonadIO.liftIO $ triggerPopRoute (parse path)
-    cbVal <- JSaddle.toJSVal cb
-    JSDOM.addEventListener
-      win
-      ("popstate" :: Text.Text)
-      (Just (JSDOM.EventListener cbVal))
-      False
+      MonadIO.liftIO $ triggerPopRoute $ parse path
+
+  (evNavRoute, triggerNavRoute) <- newTriggerEvent
   dyRoute <- holdDyn initialRoute $ leftmost [evPopRoute, evNavRoute]
+
   (_, evNavs) <- flip ReaderT.runReaderT dyRoute $ runEventWriterT widget
   performEvent_ $ ffor evNavs $ \navs -> JSaddle.liftJSM $ do
-    hist <- JSDOM.getHistory =<< JSDOM.currentWindowUnchecked
-    mapM_
+    history <- JSDOM.getHistory =<< JSDOM.currentWindowUnchecked
+    Foldable.traverse_
       ( \nav -> do
-          let route = get nav
-              pushOrReplace = case nav of
+          let pushOrReplace = case nav of
                 Push _ -> JSDOM.pushState
                 Replace _ -> JSDOM.replaceState
+              route = get nav
           pushOrReplace
-            hist
+            history
             (Nothing :: Maybe Text.Text)
             ("" :: Text.Text)
             (Just (render route))
