@@ -1,5 +1,7 @@
 # Diverk
 
+[![nix][status-nix-png]][status-nix]
+
 <a href='https://play.google.com/store/apps/details?id=org.jecaro.diverk'>
     <img alt='Get it on Google Play' height='75' 
     src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/>
@@ -103,6 +105,8 @@ $ nix build .#android-release-aab
 [jsaddle-warp]: https://hackage.haskell.org/package/jsaddle-warp
 [play]: https://play.google.com/store/apps/details?id=org.jecaro.diverk
 [reflex]: https://reflex-frp.org
+[status-nix-png]: https://github.com/jecaro/diverk/workflows/nix/badge.svg
+[status-nix]: https://github.com/jecaro/diverk/actions/workflows/nix-build.yml
 [tokens]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens
 [web]: https://diverk.quillet.org
 
