@@ -1,21 +1,13 @@
 module LocalStorage (load, save) where
 
-import Control.Lens ((^.), _Wrapped)
+import Control.Lens ((^.))
+import qualified Control.Lens as Lens
 import Data.Functor (($>))
-import Data.Maybe (fromMaybe)
-import Data.Text (Text)
+import qualified Data.Maybe as Maybe
+import qualified Data.Text as Text
 import qualified JSDOM.Storage.Extra as JSDOM
-import Language.Javascript.JSaddle (liftJSM)
-import Model
-  ( Config (..),
-    Owner (..),
-    Repo (..),
-    Token (..),
-    darkMode,
-    owner,
-    repo,
-    token,
-  )
+import qualified Language.Javascript.JSaddle as JSaddle
+import qualified Model
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 
@@ -24,20 +16,20 @@ load ::
   ( Prerender t m,
     DomBuilder t m
   ) =>
-  m (Event t (Maybe Config))
+  m (Event t (Maybe Model.Config))
 load =
   onClient $ do
     ev <- getPostBuild
     performEvent
       ( ev
-          $> liftJSM
+          $> JSaddle.liftJSM
             ( do
-                mbOwner <- fmap MkOwner <$> JSDOM.load ownerTag
-                mbRepo <- fmap MkRepo <$> JSDOM.load repoTag
-                mbToken <- fmap MkToken <$> JSDOM.load tokenTag
-                darkMode' <- fromMaybe False <$> JSDOM.load darkModeTag
+                mbOwner <- fmap Model.MkOwner <$> JSDOM.load ownerTag
+                mbRepo <- fmap Model.MkRepo <$> JSDOM.load repoTag
+                mbToken <- fmap Model.MkToken <$> JSDOM.load tokenTag
+                darkMode' <- Maybe.fromMaybe False <$> JSDOM.load darkModeTag
                 pure $
-                  MkConfig
+                  Model.MkConfig
                     <$> mbOwner
                     <*> mbRepo
                     <*> pure mbToken
@@ -50,27 +42,27 @@ save ::
   ( Prerender t m,
     Applicative m
   ) =>
-  Event t Config ->
-  m (Event t Config)
+  Event t Model.Config ->
+  m (Event t Model.Config)
 save ev =
   onClient . performEvent . ffor ev $ \config ->
-    liftJSM $ do
-      JSDOM.save ownerTag $ config ^. owner . _Wrapped
-      JSDOM.save repoTag $ config ^. repo . _Wrapped
-      case config ^. token of
-        Just token' -> JSDOM.save tokenTag $ token' ^. _Wrapped
+    JSaddle.liftJSM $ do
+      JSDOM.save ownerTag $ config ^. Model.owner . Lens._Wrapped
+      JSDOM.save repoTag $ config ^. Model.repo . Lens._Wrapped
+      case config ^. Model.token of
+        Just token' -> JSDOM.save tokenTag $ token' ^. Lens._Wrapped
         Nothing -> JSDOM.clear tokenTag
-      JSDOM.save darkModeTag $ config ^. darkMode
+      JSDOM.save darkModeTag $ config ^. Model.darkMode
       pure config
 
-ownerTag :: Text
+ownerTag :: Text.Text
 ownerTag = "owner"
 
-repoTag :: Text
+repoTag :: Text.Text
 repoTag = "repo"
 
-tokenTag :: Text
+tokenTag :: Text.Text
 tokenTag = "token"
 
-darkModeTag :: Text
+darkModeTag :: Text.Text
 darkModeTag = "dark"

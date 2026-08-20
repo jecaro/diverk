@@ -1,52 +1,63 @@
 module Main (main) where
 
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.Text as T
-import Frontend (frontendBody, frontendHead)
-import Language.Javascript.JSaddle.WebSockets (jsaddleApp, jsaddleOr)
-import qualified Network.HTTP.Client as HC
-import Network.HTTP.Client.TLS (newTlsManager)
-import Network.Wai (Application, pathInfo, rawQueryString, requestHeaders, responseLBS)
-import Network.Wai.Application.Static (defaultFileServerSettings, staticApp)
-import Network.Wai.Handler.Warp (run)
-import Network.WebSockets (defaultConnectionOptions)
+import qualified Data.Text as Text
+import qualified Frontend
+import qualified Language.Javascript.JSaddle.WebSockets as JSaddle
+import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Client.TLS as HTTP
+import qualified Network.Wai as Wai
+import qualified Network.Wai.Application.Static as Wai
+import qualified Network.Wai.Handler.Warp as Warp
+import qualified Network.WebSockets as WebSocket
 import Reflex.Dom.Core
 import qualified Route
 
-githubProxy :: HC.Manager -> [T.Text] -> Application
-githubProxy mgr pathSegments req respond = do
-  let path = T.intercalate "/" pathSegments
-      qs = BC.unpack (rawQueryString req)
-      url = "https://api.github.com/" <> T.unpack path <> qs
-      hdrs = filter ((`elem` ["Authorization", "Accept", "Content-Type", "User-Agent"]) . fst) (requestHeaders req)
-  initReq <- HC.parseRequest url
-  let ghReq = initReq {HC.requestHeaders = hdrs}
-  resp <- HC.httpLbs ghReq mgr
-  -- http-client decompresses gzip but leaves Content-Encoding in the headers;
-  -- strip it so the browser doesn't try to decode already-plain bytes.
-  let respHeaders =
+githubProxy :: HTTP.Manager -> [Text.Text] -> Wai.Application
+githubProxy mgr pathSegments request respond = do
+  let path = Text.intercalate "/" pathSegments
+      queryString = BC.unpack $ Wai.rawQueryString request
+      url = "https://api.github.com/" <> Text.unpack path <> queryString
+      headers =
         filter
-          ((`notElem` ["Content-Encoding", "Transfer-Encoding"]) . fst)
-          (HC.responseHeaders resp)
+          ((`elem` allowedHeaders) . fst)
+          (Wai.requestHeaders request)
+  initRequest <- HTTP.parseRequest url
+  let githubRequest =
+        initRequest
+          { HTTP.requestHeaders = headers,
+            HTTP.decompress = const False
+          }
+  response <- HTTP.httpLbs githubRequest mgr
   respond $
-    responseLBS
-      (HC.responseStatus resp)
-      respHeaders
-      (HC.responseBody resp)
+    Wai.responseLBS
+      (HTTP.responseStatus response)
+      (HTTP.responseHeaders response)
+      (HTTP.responseBody response)
+  where
+    allowedHeaders = ["Authorization", "Accept", "Content-Type", "User-Agent"]
 
 main :: IO ()
 main = do
-  mgr <- newTlsManager
-  let static = staticApp (defaultFileServerSettings "static/out")
-      fallback req respond = case pathInfo req of
-        ("css" : _) -> static req respond
-        ("fontawesome" : _) -> static req respond
-        ("api" : "github" : rest) -> githubProxy mgr rest req respond
-        _ -> jsaddleApp req respond
+  manager <- HTTP.newTlsManager
   app <-
-    jsaddleOr
-      defaultConnectionOptions
-      (mainWidgetWithHead frontendHead $ Route.run frontendBody)
-      fallback
+    JSaddle.jsaddleOr
+      WebSocket.defaultConnectionOptions
+      (mainWidgetWithHead Frontend.head $ Route.run Frontend.body)
+      $ fallback manager
   putStrLn "serving app on http://localhost:3000"
-  run 3000 app
+  Warp.run 3000 app
+  where
+    static :: Wai.Application
+    static = Wai.staticApp $ Wai.defaultFileServerSettings "static/out"
+
+    fallback ::
+      HTTP.Manager ->
+      Wai.Request ->
+      (Wai.Response -> IO Wai.ResponseReceived) ->
+      IO Wai.ResponseReceived
+    fallback manager request respond = case Wai.pathInfo request of
+      ("css" : _) -> static request respond
+      ("fontawesome" : _) -> static request respond
+      ("api" : "github" : rest) -> githubProxy manager rest request respond
+      _ -> JSaddle.jsaddleApp request respond

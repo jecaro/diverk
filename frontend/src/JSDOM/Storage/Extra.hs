@@ -2,40 +2,30 @@
 
 module JSDOM.Storage.Extra (save, load, clear) where
 
-import Control.Monad.Trans.Maybe (MaybeT (..), runMaybeT)
-import Data.String.Interpolate (iii)
-import Data.Text (Text)
-import JSDOM (currentWindowUnchecked)
-import JSDOM.Storage (getItem, removeItem, setItem)
-import JSDOM.Types (Storage, ToJSVal (..))
-import JSDOM.Window (getLocalStorage)
-import Language.Javascript.JSaddle
-  ( FromJSVal (..),
-    JSM,
-    JSString,
-    JSVal,
-    call,
-    eval,
-    global,
-    valIsNull,
-    valToJSON,
-  )
+import qualified Control.Monad.Trans.Maybe as MaybeT
+import qualified Data.String.Interpolate as Interpolate
+import qualified Data.Text as Text
+import qualified JSDOM
+import qualified JSDOM.Storage as JSDOM
+import qualified JSDOM.Types as JSDOM
+import qualified JSDOM.Window as JSDOM
+import qualified Language.Javascript.JSaddle as JSaddle
 
-getLocalStorageUnchecked :: JSM Storage
-getLocalStorageUnchecked = currentWindowUnchecked >>= getLocalStorage
+getLocalStorageUnchecked :: JSaddle.JSM JSDOM.Storage
+getLocalStorageUnchecked = JSDOM.currentWindowUnchecked >>= JSDOM.getLocalStorage
 
-save :: (ToJSVal a) => Text -> a -> JSM ()
+save :: (JSDOM.ToJSVal a) => Text.Text -> a -> JSaddle.JSM ()
 save key val = do
   ls <- getLocalStorageUnchecked
-  setItem ls key =<< valToJSON val
+  JSDOM.setItem ls key =<< JSaddle.valToJSON val
 
 -- Parse a JSON string, returns null on any error
-safeParseJSON :: JSString -> JSM JSVal
-safeParseJSON json = call (eval script) global [json]
+safeParseJSON :: JSaddle.JSString -> JSaddle.JSM JSaddle.JSVal
+safeParseJSON json = JSaddle.call (JSaddle.eval script) JSaddle.global [json]
   where
-    script :: Text
+    script :: Text.Text
     script =
-      [iii|
+      [Interpolate.iii|
       (function (str) {
         try {
           return JSON.parse(str);
@@ -46,18 +36,18 @@ safeParseJSON json = call (eval script) global [json]
       }
       )|]
 
-load :: (FromJSVal a) => Text -> JSM (Maybe a)
+load :: (JSaddle.FromJSVal a) => Text.Text -> JSaddle.JSM (Maybe a)
 load key =
-  runMaybeT $ do
-    jsString <- MaybeT $ flip getItem key =<< getLocalStorageUnchecked
-    jsVal <- MaybeT $ toMaybe =<< safeParseJSON jsString
-    MaybeT $ fromJSVal jsVal
+  MaybeT.runMaybeT $ do
+    jsString <- MaybeT.MaybeT $ flip JSDOM.getItem key =<< getLocalStorageUnchecked
+    jsVal <- MaybeT.MaybeT $ toMaybe =<< safeParseJSON jsString
+    MaybeT.MaybeT $ JSaddle.fromJSVal jsVal
   where
-    toMaybe :: JSVal -> JSM (Maybe JSVal)
+    toMaybe :: JSaddle.JSVal -> JSaddle.JSM (Maybe JSaddle.JSVal)
     toMaybe jsVal = do
-      valIsNull jsVal >>= \case
+      JSaddle.valIsNull jsVal >>= \case
         True -> pure Nothing
         False -> pure $ Just jsVal
 
-clear :: Text -> JSM ()
-clear key = getLocalStorageUnchecked >>= flip removeItem key
+clear :: Text.Text -> JSaddle.JSM ()
+clear key = getLocalStorageUnchecked >>= flip JSDOM.removeItem key

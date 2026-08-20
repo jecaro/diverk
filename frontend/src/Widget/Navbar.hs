@@ -1,7 +1,7 @@
 module Widget.Navbar (widget, menu, spacer) where
 
-import Control.Monad (void)
-import qualified Data.Text as T
+import qualified Control.Monad as Monad
+import qualified Data.Text as Text
 import Reflex.Dom.Core hiding (Home, Search)
 import qualified Route
 import qualified Widget.Icon as Icon
@@ -21,12 +21,12 @@ menu enableSearch = do
   let dyOnCurrent route = not . sameRoute route <$> dyRoute
   elClass "div" "dropdown dropdown-end" $ do
     elAttr "label" ("tabindex" =: "0" <> "class" =: "btn btn-ghost btn-circle") $
-      elClass "div" (T.unwords [Icon.solid, Icon.kebabName]) blank
+      elClass "div" (Text.unwords [Icon.solid, Icon.kebabName]) blank
     elAttr
       "ul"
       ( "tabindex" =: "0"
           <> "class"
-            =: T.unwords
+            =: Text.unwords
               [ "mt-3",
                 "p-2",
                 "shadow",
@@ -50,7 +50,7 @@ menu enableSearch = do
       let dyRouteEnable' = dyRouteEnable route
       (e, _) <- elDynClass' "li" (liClass <$> dyRouteEnable') $
         elClass "div" "flex items-center gap-2" $ do
-          void icon
+          Monad.void icon
           text label
       let evClickIfRouteEnable = gate (current dyRouteEnable') $ domEvent Click e
       Route.set $ Route.Push route <$ evClickIfRouteEnable

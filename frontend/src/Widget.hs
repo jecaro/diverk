@@ -1,7 +1,6 @@
 module Widget (card, error, link, spinner) where
 
-import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import Reflex.Dom.Core hiding (link)
 import qualified Route
 import qualified Widget.Icon as Icon
@@ -11,7 +10,7 @@ spinner :: (DomBuilder t m) => m ()
 spinner =
   elClass
     "div"
-    ( T.unwords
+    ( Text.unwords
         [ "absolute",
           "right-1/2",
           "bottom-1/2",
@@ -22,7 +21,7 @@ spinner =
     )
     $ elClass
       "div"
-      ( T.unwords
+      ( Text.unwords
           [ "border-t-transparent",
             "border-solid",
             "animate-spin",
@@ -42,10 +41,10 @@ error ::
     Route.ToUrl m,
     Route.Ask t m
   ) =>
-  Text -> m ()
+  Text.Text -> m ()
 error msg = do
   elClass "div" "p-4" $
-    elClass "div" (T.unwords ["alert", "alert-error", "shadow-lg"]) $
+    elClass "div" (Text.unwords ["alert", "alert-error", "shadow-lg"]) $
       do
         el "div" $ do
           Icon.iconClass Icon.infoName mempty
@@ -62,7 +61,7 @@ card =
   elClass "div" "flex items-start md:h-full md:pt-[20vh]"
     . elClass
       "div"
-      ( T.unwords
+      ( Text.unwords
           [ "flex",
             "flex-col",
             "md:rounded-lg",
@@ -77,5 +76,5 @@ card =
           ]
       )
 
-link :: (DomBuilder t m) => Text -> m () -> m ()
+link :: (DomBuilder t m) => Text.Text -> m () -> m ()
 link url = elAttr "a" ("class" =: "link" <> "href" =: url)
