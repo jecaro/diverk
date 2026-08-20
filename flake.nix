@@ -111,11 +111,8 @@
         }).androidsdk;
       androidSdkRoot = "${androidSdk}/libexec/android-sdk";
 
-
-    in
-    let
       systemPackages = rec {
-        diverkStatic = pkgs.stdenv.mkDerivation {
+        diverk-static = pkgs.stdenv.mkDerivation {
           name = "diverk-static";
           src = ./.;
           nativeBuildInputs = [ pkgs.nodejs ];
@@ -146,7 +143,7 @@
 
         default = pkgs.symlinkJoin {
           name = "diverk";
-          paths = [ diverk-wasm diverkStatic ];
+          paths = [ diverk-wasm diverk-static ];
         };
 
         # Upload to Google Play Store.
