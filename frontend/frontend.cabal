@@ -130,3 +130,20 @@ executable frontend
       wai-app-static,
       warp,
       websockets,
+
+test-suite tests
+  import: defaults
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  other-modules: Tests.Route
+  build-depends:
+    base,
+    frontend,
+    hedgehog,
+    tasty,
+    tasty-hedgehog,
+    text,
+
+  if arch(wasm32)
+    buildable: False
