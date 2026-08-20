@@ -1,32 +1,33 @@
 {-# LANGUAGE RecursiveDo #-}
 
-module Frontend (frontendHead, frontendBody) where
+module Frontend (head, body) where
 
-import Control.Lens (preview, to, _Just)
-import Control.Monad (void)
-import Control.Monad.Fix (MonadFix)
-import Control.Monad.IO.Class (MonadIO)
-import Data.Maybe (isJust)
-import LocalStorage (load, save)
-import Model (Config (..), darkMode)
+import qualified Control.Lens as Lens
+import qualified Control.Monad as Monad
+import qualified Control.Monad.Fix as MonadFix
+import qualified Control.Monad.IO.Class as MonadIO
+import qualified Data.Maybe as Maybe
+import qualified LocalStorage
+import qualified Model
 import qualified Page.About as About
 import qualified Page.Browse as Browse
 import qualified Page.Search as Search
 import qualified Page.Settings as Settings
 import Reflex.Dom.Core hiding (Home, Search)
 import qualified Route
-import Theme (setDarkModeOn)
-import Witherable (catMaybes)
+import qualified Theme
+import qualified Witherable
+import Prelude hiding (head)
 
 data State
   = -- | The initial state: before the config is loaded from the local storage
     MkInit
   | -- | After the config is loaded from the local storage
-    MkConfigLoaded (Maybe Config)
+    MkConfigLoaded (Maybe Model.Config)
   deriving stock (Show, Eq)
 
-frontendHead :: (DomBuilder t m) => m ()
-frontendHead = do
+head :: (DomBuilder t m) => m ()
+head = do
   el "title" $ text "Diverk"
   elAttr
     "meta"
@@ -50,29 +51,31 @@ frontendHead = do
     )
     blank
 
-frontendBody ::
+body ::
   forall t m.
   ( DomBuilder t m,
     Prerender t m,
-    MonadFix m,
+    MonadFix.MonadFix m,
     MonadHold t m,
     PostBuild t m,
     PerformEvent t m,
     TriggerEvent t m,
-    MonadIO (Performable m),
+    MonadIO.MonadIO (Performable m),
     Route.Set t m,
     Route.ToUrl m,
     Route.Ask t m
   ) =>
   m ()
-frontendBody = do
+body = do
   dyRoute <- Route.ask
-  evSettingsLoaded <- fmap MkConfigLoaded <$> load
+  evSettingsLoaded <- fmap MkConfigLoaded <$> LocalStorage.load
 
   rec dyState <- holdDyn MkInit $ leftmost [evSettingsLoaded, evSettingsSaved]
       let dyDarkModeOnRouteChange = getDarkMode <$> dyState <* dyRoute
-          evDarkModeOnRouteChange = catMaybes $ updated dyDarkModeOnRouteChange
-      void $ setDarkModeOn evDarkModeOnRouteChange
+          evDarkModeOnRouteChange =
+            Witherable.catMaybes $
+              updated dyDarkModeOnRouteChange
+      Monad.void $ Theme.setDarkModeOn evDarkModeOnRouteChange
       evSettingsSaved <-
         switchHold never =<< dyn (route <$> dyRoute <*> dyState)
 
@@ -80,17 +83,17 @@ frontendBody = do
   where
     getConfig (MkConfigLoaded mbConfig) = mbConfig
     getConfig _ = Nothing
-    getDarkMode = preview (to getConfig . _Just . darkMode)
+    getDarkMode = Lens.preview (Lens.to getConfig . Lens._Just . Model.darkMode)
 
 route ::
   ( DomBuilder t m,
     Prerender t m,
     PostBuild t m,
     MonadHold t m,
-    MonadFix m,
+    MonadFix.MonadFix m,
     PerformEvent t m,
     TriggerEvent t m,
-    MonadIO (Performable m),
+    MonadIO.MonadIO (Performable m),
     Route.Set t m,
     Route.ToUrl m,
     Route.Ask t m
@@ -100,15 +103,17 @@ route ::
   m (Event t State)
 route Route.Settings (MkConfigLoaded mbConfig) = do
   evOk <- Settings.page mbConfig
-  evSaved <- save evOk
+  evSaved <- LocalStorage.save evOk
   Route.set $ Route.Push (Route.Browse []) <$ evSaved
   pure $ MkConfigLoaded . Just <$> evSaved
 route (Route.Browse path) (MkConfigLoaded (Just config)) = do
   Browse.page config path
   pure never
-route (Route.Search keywords) (MkConfigLoaded (Just (MkConfig owner repo (Just token) _))) = do
-  Search.page owner repo token keywords
-  pure never
+route
+  (Route.Search keywords)
+  (MkConfigLoaded (Just (Model.MkConfig owner repo (Just token) _))) = do
+    Search.page owner repo token keywords
+    pure never
 route Route.Home (MkConfigLoaded (Just _)) = do
   ev <- getPostBuild
   Route.set $ Route.Replace (Route.Browse []) <$ ev
@@ -121,5 +126,5 @@ route Route.About (MkConfigLoaded mbConfig) = do
   About.page hasToken
   pure never
   where
-    hasToken = isJust $ coToken =<< mbConfig
+    hasToken = Maybe.isJust $ Model.coToken =<< mbConfig
 route _ _ = pure never

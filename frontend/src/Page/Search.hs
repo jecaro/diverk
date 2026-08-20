@@ -3,19 +3,19 @@
 module Page.Search (page) where
 
 import Control.Arrow ((***))
-import Control.Lens (to, toListOf, (^.), _Unwrapped)
-import Control.Monad (join, when)
-import Control.Monad.Fix (MonadFix)
+import Control.Lens ((^.))
+import qualified Control.Lens as Lens
+import qualified Control.Monad as Monad
+import qualified Control.Monad.Fix as MonadFix
 import qualified Data.Aeson as JSON
-import Data.Aeson.Lens (key, values, _String)
-import Data.Foldable (traverse_)
-import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Aeson.Lens as Aeson
+import qualified Data.Foldable as Foldable
+import qualified Data.Text as Text
 import qualified GHCJS.DOM.Types as GHCJSDOM
-import JSDOM.Generated.HTMLElement (focus)
+import qualified JSDOM.Generated.HTMLElement as JSDOM
 import qualified JSDOM.HTMLInputElement as JSDOM
-import JSDOM.Types (liftJSM)
-import Model (Owner, Path (..), Repo, Token)
+import qualified JSDOM.Types as JSDOM
+import qualified Model
 import Reflex.Dom.Core hiding (Search)
 import Reflex.Extra (onClient)
 import qualified Request
@@ -23,7 +23,7 @@ import qualified Route
 import qualified Widget
 import qualified Widget.Icon as Icon
 import qualified Widget.Navbar as Navbar
-import qualified Witherable as W
+import qualified Witherable
 
 data Error
   = ErStatus Word
@@ -35,7 +35,7 @@ data Error
 data State
   = StInitial
   | StFetching
-  | StResults [Path]
+  | StResults [Model.Path]
   deriving stock (Show)
 
 data LocalEvent
@@ -59,18 +59,18 @@ responseToState response =
         $ decodeXhrResponse response
     code -> Left $ ErStatus code
   where
-    toPaths :: JSON.Value -> [Path]
+    toPaths :: JSON.Value -> [Model.Path]
     toPaths =
-      toListOf $
-        key "items"
-          . values
-          . key "path"
-          . _String
-          . to (T.splitOn "/")
-          . _Unwrapped
+      Lens.toListOf $
+        Aeson.key "items"
+          . Aeson.values
+          . Aeson.key "path"
+          . Aeson._String
+          . Lens.to (Text.splitOn "/")
+          . Lens._Unwrapped
 
-errorToText :: Error -> Text
-errorToText (ErStatus code) = "Unexpected status code: " <> T.pack (show code)
+errorToText :: Error -> Text.Text
+errorToText (ErStatus code) = "Unexpected status code: " <> Text.pack (show code)
 errorToText ErJSON = "Invalid JSON"
 errorToText ErRequest = "Request error"
 errorToText ErInvalid = "Invalid state"
@@ -80,15 +80,15 @@ page ::
     PostBuild t m,
     Prerender t m,
     MonadHold t m,
-    MonadFix m,
+    MonadFix.MonadFix m,
     Route.Set t m,
     Route.ToUrl m,
     Route.Ask t m
   ) =>
-  Owner ->
-  Repo ->
-  Token ->
-  [Text] ->
+  Model.Owner ->
+  Model.Repo ->
+  Model.Token ->
+  [Text.Text] ->
   m ()
 page owner repo token keywords = do
   Navbar.widget $
@@ -96,7 +96,7 @@ page owner repo token keywords = do
   elClass "div" "flex flex-col gap-4 p-4 overflow-auto" $ do
     -- We dont send the request if there is no keywords
     evRequest <-
-      (request <$) . W.filter (const . not $ null keywords) <$> getPostBuild
+      (request <$) . Witherable.filter (const . not $ null keywords) <$> getPostBuild
     evResponse <- onClient $ performRequestAsyncWithError evRequest
     dyState <-
       foldDyn updateState (Right StInitial) $
@@ -108,35 +108,35 @@ page owner repo token keywords = do
       Right StInitial -> blank
       Right StFetching -> Widget.spinner
       Right (StResults []) -> el "div" $ text "No results"
-      Right (StResults paths) -> traverse_ elPath paths
+      Right (StResults paths) -> Foldable.traverse_ elPath paths
       Left err -> Widget.error $ errorToText err
   where
     request = Request.search token owner repo keywords
-    elPath (MkPath pieces) =
+    elPath (Model.MkPath pieces) =
       el "div" $
         Route.link (Route.Push $ Route.Browse pieces) $
           text $
-            T.intercalate "/" pieces
+            Text.intercalate "/" pieces
 
 searchInput ::
   ( DomBuilder t m,
     Prerender t m,
     Route.Set t m
   ) =>
-  [Text] ->
-  m (Dynamic t [Text])
+  [Text.Text] ->
+  m (Dynamic t [Text.Text])
 searchInput keywords = elClass "form-control" "flex-1" $ do
   (dyKeywords, evEnterOnNonEmptyKeywords) <- fmap unwrap . prerender (pure mempty) $
     do
       ie <- inputElement'
       -- Set focus on the input element after the page is loaded
       -- see: https://github.com/reflex-frp/reflex-dom/issues/435
-      when (null keywords) $ do
+      Monad.when (null keywords) $ do
         delayedPostBuild <- delay 0.1 =<< getPostBuild
         performEvent_ $
-          liftJSM (focus $ htmlElement ie) <$ delayedPostBuild
+          JSDOM.liftJSM (JSDOM.focus $ htmlElement ie) <$ delayedPostBuild
 
-      let dyKeywords = T.words <$> value ie
+      let dyKeywords = Text.words <$> value ie
           evEnterOnNonEmptyKeywords =
             ffilter (not . null) . tagPromptlyDyn dyKeywords $ keypress Enter ie
       pure (dyKeywords, evEnterOnNonEmptyKeywords)
@@ -147,14 +147,14 @@ searchInput keywords = elClass "form-control" "flex-1" $ do
       inputElement
         ( def
             & inputElementConfig_initialValue
-            .~ T.unwords keywords
+            .~ Text.unwords keywords
             & initialAttributes
             .~ ( "placeholder" =: "Keywords"
                    <> "type" =: "text"
                    <> "class" =: "input input-bordered w-full"
                )
         )
-    unwrap = (join *** switchDyn) . splitDynPure
+    unwrap = (Monad.join *** switchDyn) . splitDynPure
     htmlElement =
       JSDOM.HTMLInputElement . GHCJSDOM.unHTMLInputElement . _inputElement_raw
 
@@ -163,7 +163,7 @@ searchButton ::
     PostBuild t m,
     Route.Set t m
   ) =>
-  Dynamic t [Text] ->
+  Dynamic t [Text.Text] ->
   m ()
 searchButton dyKeywords =
   elClass "label" "btn btn-ghost btn-circle" $
@@ -176,6 +176,6 @@ searchButton dyKeywords =
     dyHasKeyWords = not . null <$> dyKeywords
     searchIcon = elDynClass "span" (iconClasses <$> dyHasKeyWords) blank
     iconClasses hasKw =
-      T.unwords . mappend [Icon.solid, Icon.searchName] . pure $ opacity hasKw
+      Text.unwords . mappend [Icon.solid, Icon.searchName] . pure $ opacity hasKw
     opacity True = mempty
     opacity False = "opacity-50"

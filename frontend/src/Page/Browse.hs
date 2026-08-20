@@ -1,27 +1,26 @@
 module Page.Browse (page) where
 
-import qualified Commonmark as CM
-import Control.Lens (preview, to, toListOf, (^.), (^?), _last)
-import Control.Monad (forM_)
-import Control.Monad.Fix (MonadFix)
-import qualified Data.Aeson as JSON
-import Data.Aeson.Lens (key, values, _String)
-import Data.Bifunctor (Bifunctor (first))
-import qualified Data.ByteString.Base64 as B64
-import Data.Either.Extra (maybeToEither)
-import Data.Foldable (traverse_)
-import Data.List (inits)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import Data.Text.Encoding.Error (UnicodeException)
+import qualified Commonmark as Commonmark
+import Control.Lens ((^.), (^?))
+import qualified Control.Lens as Lens
+import qualified Control.Monad as Monad
+import qualified Control.Monad.Fix as MonadFix
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as Aeson
+import qualified Data.Bifunctor as Bifunctor
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.Either.Extra as Either
+import qualified Data.Foldable as Foldable
+import qualified Data.List as List
+import qualified Data.Maybe as Maybe
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Encoding.Error as Text
 import qualified Data.Text.Lazy as LT
 import qualified GHCJS.DOM.Types as GHCJSDOM
-import JSDOM.Element (setInnerHTML)
 import qualified JSDOM.Element as JSDOM
-import JSDOM.Types (liftJSM)
-import Model (Config (..), Path (..))
+import qualified JSDOM.Types as JSDOM
+import qualified Model
 import Reflex.Dom.Core
 import Reflex.Extra (onClient)
 import qualified Request
@@ -33,8 +32,8 @@ import qualified Widget.Navbar as Navbar
 data Error
   = ErStatus Word
   | ErJSON
-  | ErBase64 UnicodeException
-  | ErMarkdown CM.ParseError
+  | ErBase64 Text.UnicodeException
+  | ErMarkdown Commonmark.ParseError
   | ErRequest
   | ErInvalid
   deriving stock (Eq, Show)
@@ -42,9 +41,9 @@ data Error
 data State
   = StInitial
   | StFetching
-  | StDirectory [Path]
-  | StMarkdown (CM.Html ())
-  | StOther Text
+  | StDirectory [Model.Path]
+  | StMarkdown (Commonmark.Html ())
+  | StOther Text.Text
   deriving stock (Show)
 
 data LocalEvent
@@ -62,50 +61,55 @@ responseToState :: XhrResponse -> Either Error State
 responseToState response =
   case response ^. xhrResponse_status of
     200 -> do
-      v <- maybeToEither ErJSON $ decodeXhrResponse response
+      v <- Either.maybeToEither ErJSON $ decodeXhrResponse response
       case v of
-        JSON.Array _ -> toDirectory v
-        JSON.Object _ -> toMarkdownOrCode v
+        Aeson.Array _ -> toDirectory v
+        Aeson.Object _ -> toMarkdownOrCode v
         _ -> Left ErJSON
     code -> Left $ ErStatus code
   where
-    toMarkdownOrCode :: JSON.Value -> Either Error State
+    toMarkdownOrCode :: Aeson.Value -> Either Error State
     toMarkdownOrCode v = do
-      path <- maybeToEither ErJSON $ parsePath v
-      base64Content <- maybeToEither ErJSON $ parseContent v
+      path <- Either.maybeToEither ErJSON $ parsePath v
+      base64Content <- Either.maybeToEither ErJSON $ parseContent v
       rawContent <-
-        first ErBase64
-          . decodeUtf8'
-          . B64.decodeLenient
-          $ encodeUtf8 base64Content
+        Bifunctor.first ErBase64
+          . Text.decodeUtf8'
+          . Base64.decodeLenient
+          $ Text.encodeUtf8 base64Content
       case extension path of
         "md" -> do
-          parsed <- first ErMarkdown $ CM.commonmark "markdown" rawContent
+          parsed <-
+            Bifunctor.first ErMarkdown $
+              Commonmark.commonmark "markdown" rawContent
           pure $ StMarkdown parsed
         _ -> pure $ StOther rawContent
 
-    toDirectory :: JSON.Value -> Either Error State
+    toDirectory :: Aeson.Value -> Either Error State
     toDirectory =
       fmap StDirectory
-        . maybeToEither ErJSON
+        . Either.maybeToEither ErJSON
         . traverse toPath
-        . toListOf values
+        . Lens.toListOf Aeson.values
 
-    toPath :: JSON.Value -> Maybe Path
-    toPath = fmap MkPath . parsePath
+    toPath :: Aeson.Value -> Maybe Model.Path
+    toPath = fmap Model.MkPath . parsePath
 
-    extension = T.takeWhileEnd (/= '.') . fromMaybe "" . preview _last
-    parseContent = preview $ key "content" . _String . to withoutEOL
+    extension =
+      Text.takeWhileEnd (/= '.') . Maybe.fromMaybe "" . Lens.preview Lens._last
+    parseContent =
+      Lens.preview $ Aeson.key "content" . Aeson._String . Lens.to withoutEOL
     -- The GitHub API pads the text with newlines every 60 characters
-    withoutEOL = T.filter (/= '\n')
-    parsePath = preview $ key "path" . _String . to splitPath
-    splitPath = T.split (== '/')
+    withoutEOL = Text.filter (/= '\n')
+    parsePath =
+      Lens.preview $ Aeson.key "path" . Aeson._String . Lens.to splitPath
+    splitPath = Text.split (== '/')
 
-errorToText :: Error -> Text
-errorToText (ErStatus code) = "Unexpected status code: " <> T.pack (show code)
+errorToText :: Error -> Text.Text
+errorToText (ErStatus code) = "Unexpected status code: " <> Text.pack (show code)
 errorToText ErJSON = "Invalid JSON"
-errorToText (ErBase64 err) = "Base64 error: " <> T.pack (show err)
-errorToText (ErMarkdown err) = "Markdown error: " <> T.pack (show err)
+errorToText (ErBase64 err) = "Base64 error: " <> Text.pack (show err)
+errorToText (ErMarkdown err) = "Markdown error: " <> Text.pack (show err)
 errorToText ErRequest = "Request error"
 errorToText ErInvalid = "Invalid state"
 
@@ -114,15 +118,15 @@ page ::
     PostBuild t m,
     Prerender t m,
     MonadHold t m,
-    MonadFix m,
+    MonadFix.MonadFix m,
     Route.Set t m,
     Route.ToUrl m,
     Route.Ask t m
   ) =>
-  Config ->
-  [Text] ->
+  Model.Config ->
+  [Text.Text] ->
   m ()
-page MkConfig {..} path = do
+page Model.MkConfig {..} path = do
   evRequest <-
     (Request.contents coToken coOwner coRepo path <$) <$> getPostBuild
   evResponse <- onClient $ performRequestAsyncWithError evRequest
@@ -132,7 +136,7 @@ page MkConfig {..} path = do
       leftmost
         [LoStartRequest <$ evRequest, LoEndRequest <$> evResponse]
 
-  navbar' path (isJust coToken)
+  navbar' path $ Maybe.isJust coToken
   dyn_ . ffor dynState $ \case
     Left err -> Widget.error (errorToText err)
     Right state ->
@@ -148,18 +152,18 @@ contentWidget ::
   State ->
   m ()
 contentWidget (StDirectory pathsToFiles) =
-  forM_ pathsToFiles $ \(MkPath pathToFile) ->
+  Monad.forM_ pathsToFiles $ \(Model.MkPath pathToFile) ->
     el "div" $
       Route.link (Route.Push (Route.Browse pathToFile)) $
-        text . fromMaybe "/" $
-          pathToFile ^? _last
+        text . Maybe.fromMaybe "/" $
+          pathToFile ^? Lens._last
 contentWidget (StMarkdown html) =
   prerender_ blank $ do
     (e, _) <- elClass' "article" "prose" blank
-    liftJSM $
-      setInnerHTML
+    JSDOM.liftJSM $
+      JSDOM.setInnerHTML
         (JSDOM.Element . GHCJSDOM.unElement $ _element_raw e)
-        (LT.toStrict $ CM.renderHtml html)
+        (LT.toStrict $ Commonmark.renderHtml html)
 contentWidget (StOther code) =
   elClass "article" "prose" . el "pre" . el "code" . text $ code
 contentWidget _ = Widget.spinner
@@ -171,14 +175,15 @@ navbar' ::
     Route.ToUrl m,
     Route.Ask t m
   ) =>
-  [Text] ->
+  [Text.Text] ->
   Bool ->
   m ()
 navbar' path hasToken =
   Navbar.widget $ do
     elClass "div" "breadcrumbs flex gap-x-4 w-full" $
       el "ul" $
-        traverse_ liIntermediatePath (inits path)
+        Foldable.traverse_ liIntermediatePath $
+          List.inits path
     Navbar.menu hasToken
   where
     liIntermediatePath intermediatePath =

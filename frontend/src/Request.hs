@@ -6,77 +6,81 @@ module Request
   )
 where
 
-import Control.Lens ((<>~), (^.), _Wrapped)
-import Data.Map (Map)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import Model (Owner, Repo, Token)
-import Network.HTTP.Types.URI (renderSimpleQuery)
+import Control.Lens ((<>~), (^.))
+import qualified Control.Lens as Lens
+import qualified Data.Map as Map
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Model
+import qualified Network.HTTP.Types.URI as HTTP
 import Reflex.Dom.Core
 
-users :: Maybe Token -> Owner -> XhrRequest ()
+users :: Maybe Model.Token -> Model.Owner -> XhrRequest ()
 users mbToken owner =
   xhrRequest "GET" (usersURL owner) (requestConfig mbToken)
 
-contents :: Maybe Token -> Owner -> Repo -> [Text] -> XhrRequest ()
+contents ::
+  Maybe Model.Token -> Model.Owner -> Model.Repo -> [Text.Text] -> XhrRequest ()
 contents mbToken owner repo path =
   xhrRequest "GET" (contentsURL owner repo path) (requestConfig mbToken)
 
-rateLimit :: Token -> XhrRequest ()
+rateLimit :: Model.Token -> XhrRequest ()
 rateLimit token =
   xhrRequest "GET" rateLimitURL (requestConfig $ Just token)
 
-search :: Token -> Owner -> Repo -> [Text] -> XhrRequest ()
+search ::
+  Model.Token -> Model.Owner -> Model.Repo -> [Text.Text] -> XhrRequest ()
 search token owner repo keywords =
   xhrRequest "GET" (searchURL <> queryParams) (requestConfig $ Just token)
   where
     queryParams =
-      decodeUtf8 $
-        renderSimpleQuery
+      Text.decodeUtf8 $
+        HTTP.renderSimpleQuery
           True
           [ ( "q",
-              encodeUtf8
-                . T.unwords
+              Text.encodeUtf8
+                . Text.unwords
                 $ keywords
-                  <> ["repo:" <> owner ^. _Wrapped <> "/" <> repo ^. _Wrapped]
+                  <> [ "repo:"
+                         <> owner ^. Lens._Wrapped
+                         <> "/"
+                         <> repo ^. Lens._Wrapped
+                     ]
             ),
             -- That is the maximum the GibHub API allows
             ("per_page", "100")
           ]
 
-requestConfig :: Maybe Token -> XhrRequestConfig ()
+requestConfig :: Maybe Model.Token -> XhrRequestConfig ()
 requestConfig mbToken = def & xhrRequestConfig_headers <>~ tokenHeader mbToken
 
-tokenHeader :: Maybe Token -> Map Text Text
-tokenHeader (Just token) = "Authorization" =: ("Bearer " <> token ^. _Wrapped)
+tokenHeader :: Maybe Model.Token -> Map.Map Text.Text Text.Text
+tokenHeader (Just token) =
+  "Authorization" =: ("Bearer " <> token ^. Lens._Wrapped)
 tokenHeader Nothing = mempty
 
-contentsURL :: Owner -> Repo -> [Text] -> Text
+contentsURL :: Model.Owner -> Model.Repo -> [Text.Text] -> Text.Text
 contentsURL owner repo path =
-  T.intercalate "/" $
+  Text.intercalate "/" $
     [ githubBaseURL,
       "repos",
-      owner ^. _Wrapped,
-      repo ^. _Wrapped,
+      owner ^. Lens._Wrapped,
+      repo ^. Lens._Wrapped,
       "contents"
     ]
       <> path
 
-usersURL :: Owner -> Text
+usersURL :: Model.Owner -> Text.Text
 usersURL owner =
-  T.intercalate
+  Text.intercalate
     "/"
-    [ githubBaseURL,
-      "users",
-      owner ^. _Wrapped
-    ]
+    [githubBaseURL, "users", owner ^. Lens._Wrapped]
 
-rateLimitURL :: Text
+rateLimitURL :: Text.Text
 rateLimitURL = githubBaseURL <> "/rate_limit"
 
-searchURL :: Text
+searchURL :: Text.Text
 searchURL = githubBaseURL <> "/search/code"
 
-githubBaseURL :: Text
+githubBaseURL :: Text.Text
 githubBaseURL = "/api/github"

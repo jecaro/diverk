@@ -14,16 +14,16 @@ module Model
   )
 where
 
-import Control.Lens (abbreviatedFields, makeLensesWith, makeWrapped)
-import Data.Text (Text)
+import qualified Control.Lens as Lens
+import qualified Data.Text as Text
 
-newtype Owner = MkOwner {unOwner :: Text}
+newtype Owner = MkOwner {unOwner :: Text.Text}
   deriving stock (Eq, Show, Read)
 
-newtype Repo = MkRepo {unRepo :: Text}
+newtype Repo = MkRepo {unRepo :: Text.Text}
   deriving stock (Eq, Show, Read)
 
-newtype Token = MkToken {unToken :: Text}
+newtype Token = MkToken {unToken :: Text.Text}
   deriving stock (Eq, Show, Read)
 
 data Config = MkConfig
@@ -35,17 +35,17 @@ data Config = MkConfig
   deriving stock (Eq, Show, Read)
 
 newtype Path = MkPath
-  { unPath :: [Text]
+  { unPath :: [Text.Text]
   }
   deriving stock (Eq, Show)
 
 concat
   <$> mapM
-    makeWrapped
+    Lens.makeWrapped
     [ ''Owner,
       ''Path,
       ''Repo,
       ''Token
     ]
 
-makeLensesWith abbreviatedFields ''Config
+Lens.makeLensesWith Lens.abbreviatedFields ''Config
