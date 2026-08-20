@@ -38,7 +38,6 @@ error ::
   ( DomBuilder t m,
     PostBuild t m,
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   Text.Text -> m ()

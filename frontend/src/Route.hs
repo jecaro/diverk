@@ -1,15 +1,14 @@
 -- | Client-side routing for the Diverk SPA.
 --
--- The design mirrors Obelisk's @Obelisk.Route.Frontend@: two typeclasses let
--- widgets express routing needs as constraints rather than explicit parameters.
+-- Two typeclasses let widgets express routing needs as constraints rather than
+-- explicit parameters.
 --
 -- * 'Set' — a widget that wants to navigate calls 'set'. Under the
 --   hood this is 'EventWriterT': navigation events bubble up through the widget
 --   tree and are collected at the top without any explicit plumbing.
 --
--- * 'ToUrl' — a widget that needs to render a URL (e.g. for an @\<a href\>@)
---   calls 'toUrl'. Under the hood this is 'ReaderT': 'render' is
---   threaded down implicitly.
+-- * 'Ask' — a widget that needs the current route calls 'ask'. Under the
+--   hood this is 'ReaderT': the dynamic route is threaded down implicitly.
 --
 -- 'run' wires both transformers together, reads the initial URL,
 -- listens for back/forward navigation, and drives the browser History API:
@@ -22,7 +21,6 @@ module Route
     parse,
     render,
     Set (..),
-    ToUrl (..),
     Ask (..),
     link,
     run,
@@ -78,16 +76,8 @@ render Settings = "/settings"
 render (Search kws) = "/search/" <> Text.intercalate "/" kws
 render About = "/about"
 
-data RouteEnv t = RouteEnv
-  { reDyRoute :: Dynamic t Route,
-    reRenderRoute :: Route -> Text.Text
-  }
-
 class (Reflex t, Monad m) => Set t m | m -> t where
   set :: Event t Nav -> m ()
-
-class (Monad m) => ToUrl m where
-  toUrl :: m (Route -> Text.Text)
 
 class (Reflex t, Monad m) => Ask t m | m -> t where
   ask :: m (Dynamic t Route)
@@ -95,31 +85,24 @@ class (Reflex t, Monad m) => Ask t m | m -> t where
 instance (Reflex t, Monad m) => Set t (EventWriterT t [Nav] m) where
   set ev = tellEvent (pure <$> ev)
 
-instance (Reflex t, Monad m) => ToUrl (ReaderT.ReaderT (RouteEnv t) m) where
-  toUrl = ReaderT.asks reRenderRoute
-
-instance (ToUrl m) => ToUrl (EventWriterT t w m) where
-  toUrl = Trans.lift toUrl
-
-instance (Reflex t, Monad m) => Ask t (ReaderT.ReaderT (RouteEnv t) m) where
-  ask = ReaderT.asks reDyRoute
+instance (Reflex t, Monad m) => Ask t (ReaderT.ReaderT (Dynamic t Route) m) where
+  ask = ReaderT.ask
 
 instance (Reflex t, Ask t m) => Ask t (EventWriterT t w m) where
   ask = Trans.lift ask
 
 link ::
   forall t m a.
-  (DomBuilder t m, Set t m, ToUrl m) =>
+  (DomBuilder t m, Set t m) =>
   Nav ->
   m a ->
   m a
 link nav inner = do
-  renderFn <- toUrl
   let route = get nav
       cfg =
         (def :: ElementConfig EventResult t (DomBuilderSpace m))
           & elementConfig_initialAttributes
-          .~ ("href" =: renderFn route)
+          .~ ("href" =: render route)
           & elementConfig_eventSpec
           %~ addEventSpecFlags
             (Proxy.Proxy :: Proxy.Proxy (DomBuilderSpace m))
@@ -136,7 +119,7 @@ run ::
     JSaddle.MonadJSM m,
     JSaddle.MonadJSM (Performable m)
   ) =>
-  EventWriterT t [Nav] (ReaderT.ReaderT (RouteEnv t) m) () ->
+  EventWriterT t [Nav] (ReaderT.ReaderT (Dynamic t Route) m) () ->
   m ()
 run widget = do
   initialRoute <- JSaddle.liftJSM $ do
@@ -159,9 +142,7 @@ run widget = do
       (Just (JSDOM.EventListener cbVal))
       False
   dyRoute <- holdDyn initialRoute $ leftmost [evPopRoute, evNavRoute]
-  (_, evNavs) <-
-    flip ReaderT.runReaderT (RouteEnv dyRoute render) $
-      runEventWriterT widget
+  (_, evNavs) <- flip ReaderT.runReaderT dyRoute $ runEventWriterT widget
   performEvent_ $ ffor evNavs $ \navs -> JSaddle.liftJSM $ do
     hist <- JSDOM.getHistory =<< JSDOM.currentWindowUnchecked
     mapM_

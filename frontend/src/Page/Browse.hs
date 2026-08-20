@@ -120,7 +120,6 @@ page ::
     MonadHold t m,
     MonadFix.MonadFix m,
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   Model.Config ->
@@ -146,8 +145,7 @@ page Model.MkConfig {..} path = do
 contentWidget ::
   ( DomBuilder t m,
     Prerender t m,
-    Route.Set t m,
-    Route.ToUrl m
+    Route.Set t m
   ) =>
   State ->
   m ()
@@ -172,7 +170,6 @@ navbar' ::
   ( DomBuilder t m,
     PostBuild t m,
     Route.Set t m,
-    Route.ToUrl m,
     Route.Ask t m
   ) =>
   [Text.Text] ->
