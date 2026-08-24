@@ -160,6 +160,9 @@
           JAVA_HOME = "${pkgs.jdk17.home}";
           GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdkRoot}/build-tools/35.0.0/aapt2";
 
+          # To add the output of the cache to cachix
+          # $ nix build .#android-release-aab.mitmCache
+          # $ cachix push jecaro ./result
           mitmCache = android-gradle-deps;
 
           # nixDownloadDeps hits variant-ambiguity on Android subproject test
