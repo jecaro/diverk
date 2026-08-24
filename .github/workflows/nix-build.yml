@@ -14,5 +14,10 @@ jobs:
     - name: Install nix
       uses: cachix/install-nix-action@v31
 
+    - name: Install cachix
+      uses: cachix/cachix-action@v17
+      with:
+        name: jecaro
+
     - name: Build diverk
       run: nix build .#frontend-native .#default .#android-release-aab
