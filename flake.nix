@@ -72,7 +72,7 @@
         }
       );
 
-      wasmFrontend = wasmHaskellPkgs.callCabal2nix "frontend" ./frontend { };
+      frontend-wasm = wasmHaskellPkgs.callCabal2nix "frontend" ./frontend { };
 
       # CSS + FontAwesome npm deps (Tailwind, PostCSS, etc.)
       diverk-npm-deps = pkgs.buildNpmPackage {
@@ -128,7 +128,7 @@
           nativeBuildInputs = [ wasmToolchain pkgs.nodejs pkgs.esbuild ];
           dontUnpack = true;
           buildPhase = ''
-            wasmBin=$(find ${wasmFrontend} -name '*.wasm' | head -1)
+            wasmBin=$(find ${frontend-wasm} -name '*.wasm' | head -1)
             cp ${./frontend/index.html} index.html
             cp ${./frontend/index.js} index.js
             cp ${./frontend/assemble.sh} assemble.sh
@@ -140,6 +140,9 @@
             cp -r dist/. $out/
           '';
         };
+
+        frontend-native =
+          pkgs.haskellPackages.callCabal2nix "frontend" ./frontend { };
 
         default = pkgs.symlinkJoin {
           name = "diverk";
@@ -233,7 +236,7 @@
         # shellFor pre-populates GHC_PACKAGE_PATH with WASM-compiled packages
         # so wasm32-wasi-cabal only needs to compile frontend/.
         wasm = wasmHaskellPkgs.shellFor {
-          packages = _: [ wasmFrontend ];
+          packages = _: [ frontend-wasm ];
           nativeBuildInputs = [
             wasmToolchain
             androidSdk
